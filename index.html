@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>입자 원정대</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;600;800&family=Noto+Sans+SC:wght@400;600;800&display=swap">
+<style>
+/* 레이아웃: 고정 크기 무대를 화면에 맞춰 통째로 확대·축소해 스크롤이 생기지 않는다. 온도 곡선을 보드게임 판으로 삼고, 아래에 입자 관찰창, 오른쪽에 문제 카드를 둔다. 모눈종이 위 스티커 느낌의 단일 테마. */
+:root{
+  --paper:#eaf3fa; --grid:#d3e3f0; --card:#ffffff; --ink:#1c2752; --ink-soft:#56618c;
+  --heat:#f2542d; --heat-soft:#ffe3d8; --cold:#1479d9; --cold-soft:#d9edff;
+  --good:#0d9a78; --good-soft:#d6f5ea; --sun:#ffc62e; --sun-soft:#fff2c4; --bad:#c9304a; --bad-soft:#ffe1e6;
+  --accent:var(--heat); --accent-soft:var(--heat-soft);
+  --display:"Jua","Gothic A1","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"Gothic A1","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  --line:3px solid var(--ink); --pop:4px 4px 0 var(--ink);
+}
+[data-course="cool"]{--accent:var(--cold);--accent-soft:var(--cold-soft)}
+:root[lang="zh"]{--display:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;--body:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif}
+[lang="zh"] .hero h1,[lang="zh"] .top h2,[lang="zh"] .course h2{font-weight:800}
+.langs{display:inline-flex;gap:4px}
+.langs button{font:800 .88rem var(--body);padding:.25em .65em;background:var(--card);border:2px solid var(--ink);border-radius:9px}
+.langs button[aria-pressed="true"]{background:var(--ink);color:#fff}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+.kb body{overflow-y:auto;-webkit-overflow-scrolling:touch}
+body{
+  font:16px/1.55 var(--body);color:var(--ink);word-break:keep-all;
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px;
+}
+h1,h2,h3,p{margin:0}
+#fit{position:relative;width:100%;height:100%;overflow:hidden}
+#app{position:absolute;left:0;top:0;transform-origin:0 0;padding:16px 20px}
+.view{height:100%;display:grid;gap:14px;min-height:0}
+#vHome{align-content:center}
+#vGame{grid-template-rows:auto minmax(0,1fr)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.btn{
+  font-family:var(--display);font-size:1.1rem;padding:.55em 1.1em;background:var(--card);
+  border:var(--line);border-radius:12px;box-shadow:var(--pop);transition:transform .08s,box-shadow .08s;
+}
+.btn:active:not(:disabled){transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.btn.main{background:var(--accent);color:#fff}
+.btn.sun{background:var(--sun)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.btn.small{font-size:.95rem;padding:.3em .8em;box-shadow:2px 2px 0 var(--ink);border-width:2px;border-radius:9px}
+
+/* 첫 화면 */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:center;background:var(--card);border:var(--line);border-radius:20px;box-shadow:6px 6px 0 var(--ink);padding:24px}
+.hero h1{font:400 4.2rem/1.05 var(--display);text-wrap:balance}
+.hero h1 span{color:var(--heat)} .hero h1 span+span{color:var(--cold)}
+.hero p{margin-top:10px;max-width:34em;color:var(--ink-soft);font-weight:600}
+.hero canvas{width:100%;display:block;border:6px solid #444;border-radius:12px;aspect-ratio:2/1;background:#fff}
+.hero .cap{font-size:.95rem;font-weight:800;margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.who{display:flex;flex-wrap:wrap;gap:12px;align-items:end;background:var(--sun-soft);border:var(--line);border-radius:16px;padding:14px 16px}
+.who label{display:grid;gap:3px;font-weight:800;font-size:.9rem}
+.who input,.who select{border:2px solid var(--ink);border-radius:9px;padding:.45em .6em;background:var(--card);font-weight:600}
+.who #inName{width:9.5em}.who select{width:5.2em}.who #inGrade{width:7.5em}
+.who .msg:empty{display:none}
+.who .msg{flex:1 1 100%;color:var(--bad);font-weight:800;min-height:1.4em;font-size:.92rem}
+.courses{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.course{
+  display:grid;grid-template-columns:128px minmax(0,1fr);gap:16px;align-items:center;text-align:left;
+  background:var(--card);border:var(--line);border-radius:18px;box-shadow:var(--pop);padding:16px;transition:transform .1s;
+}
+.course:hover{transform:translate(-2px,-2px)}
+.course svg{width:100%;background:var(--accent-soft);border:2px solid var(--ink);border-radius:12px}
+.course h2{font:400 1.5rem/1.2 var(--display)}
+.course small{display:block;color:var(--ink-soft);font-weight:600;margin-top:4px;font-size:.9rem}
+.course .state{display:inline-block;margin-top:8px;font-weight:800;font-size:.84rem;padding:.1em .6em;border-radius:99px;background:var(--accent-soft)}
+.rules{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;font-size:.92rem;font-weight:600;color:var(--ink-soft)}
+.rules b{color:var(--ink)}
+
+/* 게임 화면 */
+.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;background:var(--card);border:var(--line);border-radius:14px;padding:8px 14px}
+.top h2{font:400 1.3rem/1.2 var(--display);color:var(--accent);flex:0 1 auto}
+.top .who-line{font-size:.88rem;font-weight:600;color:var(--ink-soft)}
+.meter{flex:1 1 160px;min-width:0;height:14px;background:var(--paper);border:2px solid var(--ink);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+.tally{display:flex;gap:12px;align-items:center;font-variant-numeric:tabular-nums}
+.tally b{font:400 1.6rem/1 var(--display)}
+.tally .combo{font-weight:800;font-size:.85rem;background:var(--sun);border:2px solid var(--ink);border-radius:99px;padding:.05em .6em}
+.game{display:grid;min-height:0;grid-template-columns:minmax(0,1fr) 400px;grid-template-rows:auto minmax(0,1fr);gap:12px}
+[data-o="p"] .game{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr)}
+[data-o="p"] .board{height:380px}
+[data-o="p"] .boss{padding:12px 16px;gap:10px}
+[data-o="p"] .boss svg{width:96px;flex-basis:96px}
+[data-o="p"] .board{grid-area:1/1}
+[data-o="p"] .scope{grid-area:2/1}
+[data-o="p"] .q{grid-area:3/1}
+[data-o="p"] .courses{grid-template-columns:minmax(0,1fr)}
+.board{grid-area:1/1/3/2;background:var(--card);border:var(--line);border-radius:18px;overflow:hidden;min-width:0;min-height:0}
+.board svg{display:block;width:100%;height:100%}
+.scope{grid-area:1/2;display:grid;grid-template-columns:200px minmax(0,1fr);align-items:center;background:var(--card);border:var(--line);border-radius:16px;overflow:hidden}
+.scope canvas{display:block;width:100%;aspect-ratio:2/1;background:#fff;border-right:var(--line)}
+.scope .read{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:6px 10px;font-size:.78rem;font-weight:800;align-items:center}
+.scope .bar{height:10px;border:2px solid var(--ink);border-radius:99px;overflow:hidden;background:var(--paper)}
+.scope .bar i{display:block;height:100%;width:0%;background:var(--heat)}
+.scope .bar.sp i{background:var(--sun)}
+.scope .now{grid-column:1/-1;font:400 .95rem/1.25 var(--display)}
+.scope .tools{grid-column:1/-1}
+.scope .tools{display:flex;align-items:center;justify-content:space-between;gap:6px;font:800 .78rem var(--body)}
+.scope .tools label,.labChk{display:flex;align-items:center;gap:6px;cursor:pointer}
+.scope .tools input,.labChk input{width:16px;height:16px;margin:0;accent-color:var(--heat)}
+.lab{position:absolute;inset:0;z-index:20;background:var(--paper);padding:16px 20px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px}
+.labTop{display:flex;align-items:center;gap:16px}
+.labTop h2{font:400 1.6rem var(--display)}
+.labNow{flex:1;font-weight:800;color:var(--ink-soft)}
+.lab canvas{justify-self:center;max-width:100%;max-height:100%;aspect-ratio:2/1;min-height:0;background:#fff;border:10px solid #444;border-radius:14px}
+.labBar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center}
+.labChk{font-weight:800}
+.lab-s[aria-pressed="true"]{background:var(--sun)}
+.q{grid-area:2/2;grid-template-columns:minmax(0,1fr);align-content:start;overflow:hidden;min-height:0;background:var(--card);border:var(--line);border-radius:16px;box-shadow:var(--pop);padding:12px 16px;display:grid;gap:8px}
+.q .tag{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:.84rem;font-weight:800;color:var(--ink-soft)}
+.q .worth{font-family:var(--display);font-weight:400;background:var(--sun);color:var(--ink);border:2px solid var(--ink);border-radius:99px;padding:0 .7em;font-size:.95rem;white-space:nowrap}
+.q .ask{font-weight:800;font-size:1.08rem;line-height:1.5}
+.answer{display:flex;gap:8px}
+.answer input{flex:1 1 auto;min-width:0;border:var(--line);border-radius:11px;padding:.5em .7em;font-size:1.15rem;font-weight:800;background:#fff}
+.tiles{display:grid;gap:8px}
+.tile{font-weight:800;font-size:1.02rem;padding:.55em .7em;background:var(--accent-soft);border:var(--line);border-radius:11px;box-shadow:2px 2px 0 var(--ink)}
+.tile:hover:not(:disabled){background:var(--sun-soft)}
+.tile:disabled{background:var(--bad-soft);color:var(--ink-soft);text-decoration:line-through;box-shadow:none;cursor:not-allowed}
+.tile.ok:disabled{background:var(--good-soft);color:var(--ink);text-decoration:none;border-color:var(--good)}
+.say{padding:.4em .7em;border-radius:10px;font-weight:600;font-size:.96rem;border:2px solid var(--ink)}
+.say.no{background:var(--bad-soft)} .say.hint{background:var(--sun-soft)} .say.why{background:var(--good-soft)}
+.say b{font-family:var(--display);font-weight:400}
+.shake{animation:shake .32s}
+@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+.gain{position:fixed;z-index:30;font:400 2.6rem var(--display);color:var(--good);-webkit-text-stroke:1px var(--ink);pointer-events:none;animation:gain 1s ease-out forwards}
+@keyframes gain{from{transform:translateY(10px) scale(.7);opacity:0}25%{transform:translateY(0) scale(1.15);opacity:1}to{transform:translateY(-46px);opacity:0}}
+
+/* 지도 위 요소 */
+.slot rect{fill:#fff;stroke:var(--ink);stroke-width:2.5;stroke-dasharray:6 4}
+.slot text{font:400 17px var(--display);fill:var(--ink-soft);text-anchor:middle;dominant-baseline:central}
+.slot.on rect{fill:var(--sun);stroke-dasharray:none;stroke-width:3.5;animation:pulse 1.1s infinite}
+.slot.done rect{fill:var(--good-soft);stroke:var(--good);stroke-dasharray:none}
+.slot.done text{fill:var(--ink)}
+.slot .pt{font-size:12px}
+.slot .ptc{fill:var(--good);stroke:none}
+.slot .pt{fill:#fff}
+.arrow-t{cursor:default}
+@keyframes pulse{50%{fill:var(--sun-soft)}}
+.boss{display:grid;gap:16px;padding:20px;height:100%;align-content:center}
+.boss .fight{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.boss svg{width:130px;height:auto;flex:0 0 130px}
+.boss .bubble{flex:1 1 240px;min-width:0;background:var(--bad-soft);border:var(--line);border-radius:14px;padding:12px 14px;font-weight:800;font-size:1.05rem}
+.hp{display:flex;align-items:center;gap:10px;font:400 1rem var(--display)}
+.hp div{flex:1;height:18px;background:var(--paper);border:var(--line);border-radius:99px;overflow:hidden}
+.hp i{display:block;height:100%;background:var(--bad);transition:width .5s}
+.line{font-size:1.25rem;font-weight:800;line-height:2.1;background:var(--paper);border:var(--line);border-radius:14px;padding:12px 16px}
+.line .bl{display:inline-block;min-width:4.4em;text-align:center;line-height:1.5;padding:0 .4em;border:2px dashed var(--ink);border-radius:8px;background:#fff;color:var(--ink-soft)}
+.line .bl.on{background:var(--sun);border-style:solid;color:var(--ink)}
+.line .bl.done{background:var(--good-soft);border:2px solid var(--good);color:var(--ink)}
+.hit{animation:hit .4s}
+@keyframes hit{30%{transform:translateX(10px) rotate(6deg);filter:brightness(1.4)}}
+.writebox{padding:20px;display:grid;gap:12px}
+.writebox h3{font:400 1.5rem var(--display)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-weight:800;font-size:.92rem;padding:.15em .75em;border:2px solid var(--ink);border-radius:99px;background:var(--paper)}
+.chip.ok{background:var(--good-soft);border-color:var(--good)}
+textarea{width:100%;min-height:130px;border:var(--line);border-radius:12px;padding:.6em .8em;font-size:1.1rem;line-height:1.6;background:#fff;resize:vertical}
+
+/* 결과 */
+.done-card{background:var(--card);border:var(--line);border-radius:18px;box-shadow:6px 6px 0 var(--ink);padding:12px 16px;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:10px;justify-items:center;min-height:0}
+.done-card h2{font:400 1.7rem var(--display);text-align:center;text-wrap:balance}
+.done-card img{max-width:100%;max-height:100%;min-height:0;border:var(--line);border-radius:12px;display:block}
+.done-card .acts{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.done-card .note{font-size:.92rem;font-weight:600;color:var(--ink-soft);text-align:center;min-height:1.5em}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div id="fit"><div id="app">
+
+  <section id="vHome" class="view">
+    <div class="hero">
+      <div>
+        <h1 id="heroTitle"></h1>
+        <p data-i>온도 곡선을 따라 걸으며 빈칸을 채워 보세요. 입자가 어떻게 달라지는지 눈으로 확인하고, 마지막에 나타나는 오개념 몬스터를 물리치면 원정 인증서를 받습니다.</p>
+      </div>
+      <div>
+        <canvas id="heroCv" width="700" height="350" aria-label="고체, 액체, 기체로 변하는 입자 움직임"></canvas>
+        <p class="cap"><span id="heroCap">고체</span> <button class="btn small labOpen" type="button" data-i>입자 실험실 열기</button></p>
+      </div>
+    </div>
+    <form class="who" id="whoForm" autocomplete="off">
+      <label><span data-i>학년</span><select id="inGrade" disabled><option data-i>1학년</option></select></label>
+      <label for="inClass"><span data-i>반</span><select id="inClass"></select></label>
+      <label for="inNum"><span data-i>번호</span><select id="inNum"></select></label>
+      <label for="inName"><span data-i>이름</span><input id="inName" maxlength="10" data-ip="이름을 쓰세요"></label>
+      <div class="langs" style="margin-left:auto"></div>
+      <p class="msg" id="whoMsg"></p>
+    </form>
+    <div class="courses" id="courses"></div>
+    <div class="rules">
+      <span><b data-i>첫 시도 5점</b><span data-i>, 다시 할 때마다 1점씩 줄어요 (최저 1점)</span></span>
+      <span><b data-i>2번 틀리면</b><span data-i> 힌트가 나와요</span></span>
+      <span><b data-i>모두 맞히면</b><span data-i> 인증서를 이미지로 저장해요</span></span>
+      <button class="btn small fsBtn" type="button">전체화면</button>
+    </div>
+  </section>
+
+  <section id="vGame" class="view" hidden>
+    <div class="top">
+      <button class="btn small" id="btnHome" type="button" data-i>처음으로</button>
+      <h2 id="gTitle"></h2>
+      <span class="who-line" id="gWho"></span>
+      <div class="meter" aria-hidden="true"><i id="gMeter"></i></div>
+      <div class="tally">
+        <span class="combo" id="gCombo" hidden></span>
+        <span><b id="gScore">0</b> <span data-i>점</span></span>
+        <div class="langs short"></div>
+        <button class="btn small" id="btnSound" type="button" aria-pressed="false">소리 끔</button>
+        <button class="btn small fsBtn" type="button">전체화면</button>
+      </div>
+    </div>
+    <div class="game">
+      <div class="board" id="board"></div>
+        <div class="scope">
+          <canvas id="scopeCv" width="800" height="400" aria-label="현재 위치의 입자 모습"></canvas>
+          <div class="read">
+            <span class="now" id="scNow"></span>
+            <span data-i>온도</span><div class="bar"><i id="scT"></i></div>
+            <span data-i>입자 운동</span><div class="bar sp"><i id="scV"></i></div>
+            <span class="tools"><label><input type="checkbox" id="chkBond"> <span data-i>인력 표시</span></label><button class="btn small labOpen" type="button" data-i>크게 보기</button></span>
+          </div>
+        </div>
+        <div class="q" id="qCard"></div>
+    </div>
+  </section>
+
+  <section id="vDone" class="view" hidden>
+    <div class="done-card">
+      <h2 id="dTitle"></h2>
+      <img id="dImg" alt="완성한 온도 곡선과 점수가 담긴 원정 인증서">
+      <div class="acts">
+        <button class="btn sun" id="btnSave" type="button" data-i>화면 캡쳐 저장하기</button>
+        <button class="btn" id="btnAgain" type="button" data-i>다시 도전하기</button>
+        <button class="btn" id="btnBack" type="button" data-i>처음으로</button>
+        <button class="btn fsBtn" type="button">전체화면</button>
+        <div class="langs"></div>
+      </div>
+      <p class="note" id="dNote">저장 버튼이 되지 않으면 인증서 그림을 길게 눌러 저장하세요.</p>
+    </div>
+  </section>
+  <div class="lab" id="lab" hidden>
+    <div class="labTop"><h2 data-i>입자 실험실</h2><span id="labNow" class="labNow">고체</span><button class="btn small" id="labClose" type="button" data-i>닫기</button></div>
+    <canvas id="labCv" width="1800" height="900" aria-label="상자 안에서 움직이는 입자"></canvas>
+    <div class="labBar">
+      <button class="btn lab-s" type="button" data-m="0" data-i>고체</button>
+      <button class="btn lab-s" type="button" data-m="1" data-i>액체</button>
+      <button class="btn lab-s" type="button" data-m="2" data-i>기체</button>
+      <button class="btn main" id="labRun" type="button">멈춤</button>
+      <label class="labChk"><input type="checkbox" id="labBond"> <span data-i>입자 사이의 인력 표시</span></label>
+    </div>
+  </div>
+</div></div>
+<canvas id="fx" hidden></canvas>
+
+<script>
+/* ===== 선생님 설정 =====
+   MOTION_MODE: 상태 변화 중 '입자 운동' 칸의 정답 기준
+   'constant' = 일정하다 (온도가 일정하므로 입자 운동도 일정)
+   'textbook' = 가열 활발해진다 / 냉각 둔해진다
+*/
+const MOTION_MODE = 'constant';
+const CLASS_COUNT = 12, STUDENT_COUNT = 40;
+
+const FULL = 5, FLOOR = 1;
+const HEAT_PTS = [[165,440],[265,335],[375,335],[470,195],[600,195],[735,55]];
+const COOL_PTS = [[165,50],[265,150],[385,150],[480,300],[610,300],[735,445]];
+
+const motionItem = (course) => {
+  const constant = MOTION_MODE === 'constant';
+  const ans = constant ? '일정하다' : course === 'heat' ? '활발해진다' : '둔해진다';
+  const verb = course === 'heat' ? '액체가 기체로' : '기체가 액체로';
+  return {
+    id:'motion', type:'pick', slot:'motion', show:ans,
+    ask:`${verb} 변하는 동안 입자의 운동은 어떻게 될까요?`,
+    tiles:['활발해진다','일정하다','둔해진다'], answers:[ans],
+    hint: constant ? '왼쪽 온도계를 보세요. 온도는 입자 운동이 얼마나 활발한지를 나타내요. 지금 온도는 어떤가요?'
+                   : course === 'heat' ? '열에너지를 흡수한 입자를 떠올려 보세요.' : '열에너지를 방출한 입자를 떠올려 보세요.',
+    why: constant ? '온도가 그대로이니 입자 운동의 활발한 정도도 그대로예요. 상태 변화에서 달라지는 것은 배열과 거리예요.'
+                  : course === 'heat' ? '열에너지를 흡수하면 입자 운동이 활발해져요.' : '열에너지를 방출하면 입자 운동이 둔해져요.'
+  };
+};
+
+const ARR = ['더 규칙적으로 변한다','더 불규칙하게 변한다','변하지 않는다'];
+const DIS = ['멀어진다','가까워진다','변하지 않는다'];
+const ENERGY = ['흡수','방출','출입 없음'];
+
+const COURSES = {
+  cool:{
+    key:'cool', no:'01', title:'냉각 곡선 내려가기', sub:'기체에서 고체까지, 식으면서 생기는 변화', pts:COOL_PTS,
+    states:[['기체',205,48],['액체',470,205],['고체',700,392]],
+    deco:[
+      {rect:[430,22,315,132]},
+      {text:'물질이 상태 변화하는 동안',x:442,y:44,size:17},
+      {text:'입자의 운동',x:442,y:76,size:15},{text:'입자의 배열',x:442,y:108,size:15},{text:'입자 사이 거리',x:442,y:140,size:15},
+      {rect:[175,352,282,104]},
+      {text:'물질의 상태가 변하는 동안',x:187,y:376,size:15},{text:'열에너지를 방출하므로',x:187,y:399,size:15},{text:'냉각 중에도 온도가',x:187,y:432,size:15},
+      {poly:[[310,158],[340,158],[340,178],[352,178],[325,198],[298,178],[310,178]],fill:'cold'},
+      {text:'열에너지',x:294,y:222,size:15,end:1},
+      {poly:[[530,308],[560,308],[560,324],[572,324],[545,344],[518,324],[530,324]],fill:'cold'},
+      {text:'열에너지',x:532,y:368,size:15,end:1}
+    ],
+    slots:{
+      top:{x:112,y:150,w:88,h:36},low:{x:112,y:300,w:88,h:36},
+      s1:{x:325,y:112,w:86,h:36},e1:{x:352,y:216,w:100,h:34},
+      s2:{x:545,y:262,w:86,h:36},e2:{x:590,y:362,w:100,h:34},
+      temp:{x:388,y:426,w:118,h:32},
+      motion:{x:640,y:72,w:176,h:28},arrange:{x:640,y:104,w:176,h:28},dist:{x:640,y:136,w:176,h:28}
+    },
+    items:[
+      {id:'top',type:'text',slot:'top',at:[1,0],show:'끓는점',answers:['끓는점','액화점','기화점'],
+       ask:'온도계의 위쪽 빈칸이에요. 기체가 액체로 변하는 동안 머무는 이 온도는 액체가 끓을 때의 온도와 같아요. 이름이 무엇일까요?',
+       hint:'물이 100 ℃에서 부글부글할 때의 온도를 뭐라고 부르는지 떠올려 보세요. ○○점이에요.',
+       why:'액체가 끓는 온도와 기체가 액체로 변하는 온도는 같아요.'},
+      {id:'s1',type:'text',slot:'s1',at:[1,.2],show:'액화',answers:['액화'],
+       ask:'기체가 액체로 변하는 상태 변화의 이름은 무엇일까요?',
+       hint:'욕실 거울에 물방울이 맺히는 현상이에요. 무엇이 되는 변화인지 생각해 보세요.',
+       why:'기체가 액체(液)가 되니 액화(液化)예요.',
+       near:{'응고':'응고는 다른 구간의 변화예요. 지금은 기체에서 액체로 변하고 있어요.','기화':'기화는 반대 방향이에요. 지금은 온도가 내려가고 있어요.'}},
+      {id:'e1',type:'pick',slot:'e1',at:[1,.35],show:'방출',tiles:ENERGY,answers:['방출'],
+       ask:'기체가 액체로 변할 때 열에너지는 어떻게 될까요?',
+       hint:'곡선의 파란 화살표 방향을 보세요. 물질에서 어디로 향하나요?',
+       why:'냉각되는 물질은 상태가 변하는 동안에도 열에너지를 내보내요.'},
+      {id:'temp',type:'pick',slot:'temp',at:[1,.5],show:'일정하다',tiles:['계속 낮아진다','일정하다','높아진다'],answers:['일정하다'],
+       ask:'열에너지를 내보내는데 곡선이 평평해요. 상태가 변하는 동안 온도는 어떻게 될까요?',
+       hint:'캐릭터가 걷는 길의 높이를 보세요. 곡선의 높이가 바로 온도예요.',
+       why:'상태가 변하며 나온 열에너지가 온도가 내려가는 것을 막아서, 평평한 구간이 생겨요.'},
+      {...motionItem('cool'),at:[1,.65]},
+      {id:'arrange',type:'pick',slot:'arrange',at:[1,.82],show:'더 규칙적으로',tiles:ARR,answers:['더 규칙적으로 변한다'],
+       ask:'기체가 액체로 변하는 동안 입자의 배열은 어떻게 될까요?',
+       hint:'위의 입자 관찰창을 보세요. 입자들이 흩어져 있었나요, 모이고 있나요?',
+       why:'흩어져 날아다니던 입자들이 서로 모이면서 배열이 더 규칙적으로 변해요.'},
+      {id:'dist',type:'pick',slot:'dist',at:[1,1],show:'가까워진다',tiles:DIS,answers:['가까워진다'],
+       ask:'기체가 액체로 변하는 동안 입자 사이의 거리는 어떻게 될까요?',
+       hint:'기체 입자와 액체 입자 중 어느 쪽이 더 붙어 있나요?',
+       why:'액화할 때는 입자 사이 거리가 가까워져요. 입자 자체의 크기는 변하지 않아요.'},
+      {id:'low',type:'text',slot:'low',at:[3,0],show:'어는점',answers:['어는점','녹는점','응고점'],
+       ask:'온도계의 아래쪽 빈칸이에요. 액체가 고체로 변하는 동안 머무는 이 온도의 이름은 무엇일까요?',
+       hint:'물이 얼음이 되는 0 ℃를 물의 ○○점이라고 불러요.',
+       why:'어는점과 녹는점은 같은 온도예요. 같은 물질이면 둘의 값이 같아요.'},
+      {id:'s2',type:'text',slot:'s2',at:[3,.3],show:'응고',answers:['응고'],
+       ask:'액체가 고체로 변하는 상태 변화의 이름은 무엇일까요?',
+       hint:'촛농이 굳는 현상이에요. 엉겨서 굳어진다는 뜻의 두 글자 말이에요.',
+       why:'엉겨서 굳어진다는 뜻의 응고(凝固)예요.',
+       near:{'액화':'액화는 기체가 액체로 변하는 것이에요. 지금은 액체가 고체로 변해요.','융해':'융해는 반대 방향이에요. 지금은 온도가 내려가고 있어요.'}},
+      {id:'e2',type:'pick',slot:'e2',at:[3,.65],show:'방출',tiles:ENERGY,answers:['방출'],
+       ask:'액체가 고체로 변할 때 열에너지는 어떻게 될까요?',
+       hint:'온도가 일정하다고 열에너지 출입까지 없는 것은 아니에요. 화살표 방향을 보세요.',
+       why:'액화와 응고는 모두 열에너지를 방출해요. 그래서 물이 얼 때 주변이 덜 추워져요.'},
+      {id:'b1',type:'pick',view:'boss',blank:0,tiles:['배열','크기','개수'],answers:['배열'],show:'배열',at:[4,1],
+       ask:'첫째 빈칸: 상태가 변할 때 입자의 무엇이 바뀔까요?',
+       hint:'상태가 변해도 입자 자체는 그대로예요. 입자가 놓인 모습을 떠올려 보세요.',
+       why:'입자의 크기와 개수는 그대로이고, 배열이 바뀌어요.'},
+      {id:'b2',type:'pick',view:'boss',blank:1,tiles:['열에너지','공기','물'],answers:['열에너지'],show:'열에너지',at:[4,1],
+       ask:'둘째 빈칸: 입자 배열이 바뀌면서 밖으로 나오는 것은 무엇일까요?',
+       hint:'지도의 화살표 옆에 쓰여 있는 말이에요.',
+       why:'상태가 변할 때 나온 열에너지가 식는 것을 막아 줘요.'},
+      {id:'b3',type:'pick',view:'boss',blank:2,tiles:['온도','부피','색깔'],answers:['온도'],show:'온도',at:[4,1],
+       ask:'셋째 빈칸: 곡선의 평평한 구간에서 일정한 것은 무엇일까요?',
+       hint:'곡선의 세로축에 무엇이라고 쓰여 있었는지 떠올려 보세요.',
+       why:'온도계는 고장 나지 않았어요. 온도가 일정한 데에는 이유가 있어요.'}
+    ],
+    boss:{
+      taunt:'계속 식히는데 온도가 안 내려가잖아? 온도계가 고장 났지? 크크크',
+      line:['상태가 변하는 동안 입자의 ',0,'이 바뀌면서 ',1,'가 밖으로 나와요. 이 에너지가 식는 것을 막아 주어서 ',2,'가 낮아지지 않고 일정해요.']
+    },
+    writeAsk:'로르산의 상태가 변하는 동안 온도가 일정하게 유지되는 까닭을 내 말로 써 보세요.'
+  },
+  heat:{
+    key:'heat', no:'02', title:'가열 곡선 올라가기', sub:'고체에서 기체까지, 데우면서 생기는 변화', pts:HEAT_PTS,
+    states:[['고체',195,378],['액체',392,245],['기체',640,92]],
+    deco:[
+      {rect:[470,298,275,160]},
+      {text:'물질이 상태 변화하는 동안',x:482,y:324,size:17},
+      {text:'입자의 운동',x:482,y:358,size:15},{text:'입자의 배열',x:482,y:392,size:15},{text:'입자 사이 거리',x:482,y:426,size:15},
+      {poly:[[305,392],[335,392],[335,376],[347,376],[320,352],[293,376],[305,376]],fill:'heat'},
+      {text:'열에너지',x:274,y:416,size:15,end:1},
+      {poly:[[520,252],[550,252],[550,236],[562,236],[535,212],[508,236],[520,236]],fill:'heat'},
+      {text:'열에너지',x:590,y:279,size:15}
+    ],
+    slots:{
+      low:{x:112,y:335,w:88,h:36},top:{x:112,y:195,w:88,h:36},
+      s1:{x:320,y:296,w:86,h:36},e1:{x:332,y:411,w:100,h:34},
+      s2:{x:535,y:152,w:86,h:36},e2:{x:530,y:273,w:100,h:34},
+      motion:{x:668,y:354,w:138,h:28},arrange:{x:668,y:388,w:138,h:28},dist:{x:668,y:422,w:138,h:28}
+    },
+    items:[
+      {id:'low',type:'text',slot:'low',at:[1,0],show:'녹는점',answers:['녹는점','어는점','융해점'],
+       ask:'온도계의 아래쪽 빈칸이에요. 고체가 액체로 변하는 동안 머무는 이 온도의 이름은 무엇일까요?',
+       hint:'얼음이 물로 녹는 0 ℃를 물의 ○○점이라고 불러요.',
+       why:'고체가 녹는 온도가 녹는점이고, 어는점과 같은 온도예요.'},
+      {id:'s1',type:'text',slot:'s1',at:[1,.35],show:'융해',answers:['융해'],
+       ask:'고체가 액체로 변하는 상태 변화의 이름은 무엇일까요?',
+       hint:'녹는다는 뜻의 두 글자 말이에요. 설탕이 물에 녹는 것과는 다른 낱말이에요.',
+       why:'고체가 녹아서 액체가 되는 변화가 융해(融解)예요.',
+       near:{'용해':'비슷하지만 달라요! 용해는 설탕이 물에 녹는 것처럼 물질이 섞이는 현상이에요. 첫 글자가 달라요.','응고':'응고는 반대 방향이에요. 지금은 온도가 올라가고 있어요.','기화':'기화는 다른 구간의 변화예요. 지금은 고체가 액체로 변해요.'}},
+      {id:'e1',type:'pick',slot:'e1',at:[1,.7],show:'흡수',tiles:ENERGY,answers:['흡수'],
+       ask:'고체가 액체로 변할 때 열에너지는 어떻게 될까요?',
+       hint:'불은 계속 켜져 있어요. 빨간 화살표 방향을 보세요.',
+       why:'온도가 일정해도 열에너지는 계속 들어와요.'},
+      {id:'top',type:'text',slot:'top',at:[3,0],show:'끓는점',answers:['끓는점','기화점','액화점'],
+       ask:'온도계의 위쪽 빈칸이에요. 액체가 끓어서 기체로 변하는 동안 머무는 이 온도의 이름은 무엇일까요?',
+       hint:'물은 100 ℃에서 부글부글해요. 이때의 온도를 ○○점이라고 불러요.',
+       why:'끓는 동안에는 불을 세게 해도 온도가 끓는점에 머물러요.'},
+      {id:'s2',type:'text',slot:'s2',at:[3,.2],show:'기화',answers:['기화'],
+       ask:'액체가 기체로 변하는 상태 변화의 이름은 무엇일까요?',
+       hint:'젖은 빨래가 마르는 현상이에요. 무엇이 되는 변화인지 생각해 보세요.',
+       why:'액체가 기체(氣)가 되니 기화(氣化)예요.',
+       near:{'액화':'액화는 반대 방향이에요. 지금은 온도가 올라가고 있어요.','융해':'융해는 다른 구간의 변화예요. 지금은 액체가 기체로 변해요.','증발':'증발도 기화의 한 종류예요. 이 칸에는 상태 변화의 이름을 쓰세요.','끓음':'끓음도 기화의 한 종류예요. 이 칸에는 상태 변화의 이름을 쓰세요.'}},
+      {id:'e2',type:'pick',slot:'e2',at:[3,.4],show:'흡수',tiles:ENERGY,answers:['흡수'],
+       ask:'액체가 기체로 변할 때 열에너지는 어떻게 될까요?',
+       hint:'평평한 구간에서도 불은 켜져 있어요. 그 열에너지는 어디로 갈까요?',
+       why:'융해와 기화는 모두 열에너지를 흡수해요.'},
+      {...motionItem('heat'),at:[3,.6]},
+      {id:'arrange',type:'pick',slot:'arrange',at:[3,.8],show:'더 불규칙하게',tiles:ARR,answers:['더 불규칙하게 변한다'],
+       ask:'액체가 기체로 변하는 동안 입자의 배열은 어떻게 될까요?',
+       hint:'위의 입자 관찰창을 보세요. 입자들이 모여 있나요, 흩어지고 있나요?',
+       why:'입자들이 서로 떨어져 나가면서 배열이 더 불규칙해져요.'},
+      {id:'dist',type:'pick',slot:'dist',at:[3,1],show:'멀어진다',tiles:DIS,answers:['멀어진다'],
+       ask:'액체가 기체로 변하는 동안 입자 사이의 거리는 어떻게 될까요?',
+       hint:'액체 입자와 기체 입자 중 어느 쪽이 더 떨어져 있나요?',
+       why:'기화할 때는 입자 사이 거리가 멀어져요. 입자 자체의 크기는 변하지 않아요.'},
+      {id:'m1',type:'pick',view:'tri',model:0,tiles:['고체','액체','기체'],answers:['고체'],show:'고체',at:[4,1],
+       ask:'1번 입자 모형은 어떤 상태일까요?',hint:'입자가 어떻게 놓여 있나요? 줄을 맞추어 빽빽한가요?',why:'입자가 규칙적으로 빽빽하게 놓이면 고체예요.'},
+      {id:'m2',type:'pick',view:'tri',model:1,tiles:['고체','액체','기체'],answers:['액체'],show:'액체',at:[4,1],
+       ask:'2번 입자 모형은 어떤 상태일까요?',hint:'입자들이 가깝지만 줄이 맞지 않아요.',why:'입자가 가깝지만 배열이 불규칙하면 액체예요.'},
+      {id:'m3',type:'pick',view:'tri',model:2,tiles:['고체','액체','기체'],answers:['기체'],show:'기체',at:[4,1],
+       ask:'3번 입자 모형은 어떤 상태일까요?',hint:'입자 사이가 아주 멀고 자유롭게 움직여요.',why:'입자 사이가 매우 멀고 자유롭게 움직이면 기체예요.'},
+      ...[['a1','고체 → 액체','융해','흡수',0],['a2','액체 → 고체','응고','방출',1],['a3','액체 → 기체','기화','흡수',2],['a4','기체 → 액체','액화','방출',3],['a5','고체 → 기체','승화','흡수',4],['a6','기체 → 고체','승화','방출',5]].map(([id,dir,name,e,arrow])=>({
+        id,type:'pick',view:'tri',arrow,tiles:['흡수 (빨강)','방출 (파랑)'],answers:[e==='흡수'?'흡수 (빨강)':'방출 (파랑)'],show:e,at:[4,1],
+        ask:`깜빡이는 화살표(${dir})에 색을 칠해 보세요. ${name}할 때 열에너지는 어떻게 될까요?`,
+        hint:'입자 사이가 멀어지는 쪽인지, 가까워지는 쪽인지 살펴보세요.',
+        why: e==='흡수' ? '입자 사이가 멀어지는 변화는 열에너지를 흡수해요.' : '입자 사이가 가까워지는 변화는 열에너지를 방출해요.'})),
+      {id:'b1',type:'pick',view:'boss',blank:0,tiles:['열에너지','공기','물'],answers:['열에너지'],show:'열에너지',at:[4,1],
+       ask:'첫째 빈칸: 불을 켜서 물질에 가해 주는 것은 무엇일까요?',
+       hint:'지도의 화살표 옆에 쓰여 있는 말이에요.',
+       why:'불을 켜 두는 동안 열에너지는 계속 들어와요.'},
+      {id:'b2',type:'pick',view:'boss',blank:1,tiles:['배열','크기','개수'],answers:['배열'],show:'배열',at:[4,1],
+       ask:'둘째 빈칸: 그 에너지는 입자의 무엇을 바꾸는 데 쓰일까요?',
+       hint:'상태가 변해도 입자 자체는 그대로예요. 입자가 놓인 모습을 떠올려 보세요.',
+       why:'입자의 크기와 개수는 그대로이고, 배열이 바뀌어요.'},
+      {id:'b3',type:'pick',view:'boss',blank:2,tiles:['온도','부피','색깔'],answers:['온도'],show:'온도',at:[4,1],
+       ask:'셋째 빈칸: 곡선의 평평한 구간에서 일정한 것은 무엇일까요?',
+       hint:'곡선의 세로축에 무엇이라고 쓰여 있었는지 떠올려 보세요.',
+       why:'온도계는 고장 나지 않았어요. 온도가 일정한 데에는 이유가 있어요.'}
+    ],
+    boss:{
+      taunt:'불을 계속 켜 놨는데 온도가 멈췄네? 온도계가 고장 났지? 크크크',
+      line:['상태가 변하는 동안 가해 준 ',0,'는 입자의 ',1,'을 바꾸는 데 쓰여요. 그래서 ',2,'가 높아지지 않고 일정해요.']
+    },
+    writeAsk:'물의 상태가 변하는 동안 온도가 일정하게 유지되는 까닭을 열에너지 출입과 관련지어 내 말로 써 보세요.'
+  }
+};
+
+/* ===== 언어 =====
+   한국어 문장을 열쇠로 쓰고, 값은 [영어, 중국어(간체)]. 없는 문장은 한국어로 표시된다. */
+const LANGS=[['ko','한국어','한'],['en','English','EN'],['zh','中文','中']];
+const DICT={
+'입자 원정대':['Particle Expedition','粒子探险队'],
+'온도 곡선을 따라 걸으며 빈칸을 채워 보세요. 입자가 어떻게 달라지는지 눈으로 확인하고, 마지막에 나타나는 오개념 몬스터를 물리치면 원정 인증서를 받습니다.':['Walk along the temperature curve and fill in the blanks. Watch how the particles change, defeat the Misconception Monster at the end, and earn your expedition certificate.','沿着温度曲线前进,填写空格。观察粒子的变化,打败最后出现的“错误概念怪兽”,就能获得探险证书。'],
+'입자 실험실 열기':['Open Particle Lab','打开粒子实验室'],
+'학년':['Grade','年级'],'1학년':['Grade 1','一年级'],'반':['Class','班级'],'번호':['No.','学号'],'이름':['Name','姓名'],'이름을 쓰세요':['Your name','写下姓名'],'선택':['Choose','选择'],
+'첫 시도 5점':['First try: 5 points','第一次答对得 5 分'],
+', 다시 할 때마다 1점씩 줄어요 (최저 1점)':[', minus 1 for each retry (minimum 1)',',每重试一次减 1 分(最低 1 分)'],
+'2번 틀리면':['After 2 wrong answers','答错 2 次后'],' 힌트가 나와요':[' you get a hint',' 会出现提示'],
+'모두 맞히면':['When all are correct','全部答对后'],' 인증서를 이미지로 저장해요':[' save your certificate as an image',' 可以把证书保存为图片'],
+'전체화면':['Full screen','全屏'],'화면 줄이기':['Exit full screen','退出全屏'],'전체화면 불가':['Not available','无法全屏'],
+'처음으로':['Home','返回首页'],'점':[' pts','分'],'소리 켬':['Sound on','声音开'],'소리 끔':['Sound off','声音关'],
+'온도':['Temperature','温度'],'입자 운동':['Particle motion','粒子运动'],'인력 표시':['Show attraction','显示引力'],'크게 보기':['Enlarge','放大'],
+'입자 실험실':['Particle Lab','粒子实验室'],'닫기':['Close','关闭'],'실행':['Run','运行'],'멈춤':['Pause','暂停'],'입자 사이의 인력 표시':['Show attraction between particles','显示粒子之间的引力'],
+'화면 캡쳐 저장하기':['Save screen capture','保存截图'],'다시 도전하기':['Try again','再次挑战'],
+'저장 버튼이 되지 않으면 인증서 그림을 길게 눌러 저장하세요.':['If the save button does not work, press and hold the certificate image to save it.','如果保存按钮无效,请长按证书图片进行保存。'],
+'저장했어요. 다운로드 폴더를 확인하세요.':['Saved. Check your downloads folder.','已保存,请查看下载文件夹。'],
+'저장을 취소했어요. 다시 누르면 저장할 수 있어요.':['Save canceled. Press again to save.','已取消保存,再按一次即可保存。'],
+'여기서는 저장할 수 없어요. 인증서 그림을 길게 눌러 저장하세요.':['Saving is not available here. Press and hold the certificate image to save it.','这里无法保存,请长按证书图片进行保存。'],
+'아직 시작하지 않았어요':['Not started yet','尚未开始'],
+'반, 번호, 이름을 모두 입력하세요. 인증서에 들어갑니다.':['Enter your class, number and name. They appear on your certificate.','请填写班级、学号和姓名,它们会显示在证书上。'],
+'여기!':['Here!','这里!'],'체력':['HP','体力'],
+'오개념 몬스터':['Misconception Monster','错误概念怪兽'],'입자 모형 도감':['Particle Model Guide','粒子模型图鉴'],'온도 곡선':['Temperature curve','温度曲线'],
+'답을 쓰세요':['Type your answer','写下答案'],'확인':['Check','确认'],'힌트':['Hint','提示'],'정답!':['Correct!','答对了!'],'다음으로':['Next','下一步'],'설명 쓰러 가기':['Write your explanation','去写说明'],
+'이미 써 본 답이에요. 다른 답을 생각해 보세요. 점수는 줄지 않아요.':['You already tried that. Think of a different answer. No points are lost.','这个答案已经试过了,请换一个。不会扣分。'],
+'몬스터를 물리쳤어요! 마지막은 내 말로 정리하기':['Monster defeated! Finish by explaining in your own words','打败怪兽了!最后用自己的话总结'],
+'필수 단어 네 개를 모두 넣어 쓰세요.':['Use all four required words.','请用上全部四个必用词。'],
+'마지막 칸':['Last step','最后一步'],'점수 없음':['No points','不计分'],
+'필수 단어를 모두 넣어 문장을 완성하면 인증서가 열려요.':['Complete your sentences with all the required words to unlock your certificate.','用上全部必用词写完句子,就能打开证书。'],
+'인증서 받기':['Get certificate','领取证书'],
+'입자 박사':['Particle Expert','粒子博士'],'입자 탐험가':['Particle Explorer','粒子探险家'],'입자 새내기':['Particle Rookie','粒子新手'],
+'완벽한 원정: 모든 칸을 한 번에':['Perfect expedition: every blank on the first try','完美探险:每格都一次答对'],
+'끝까지 해냄: 힌트를 보고 완주':['Never gave up: finished with hints','坚持到底:看提示完成'],
+'몬스터 퇴치':['Monster defeated','打败怪兽'],
+'입자 원정대 인증서':['Particle Expedition Certificate','粒子探险队证书'],'시간':['Time','时间'],'총점':['Total score','总分'],
+'온도가 일정하게 유지되는 까닭 (내 말로 설명)':['Why the temperature stays constant (in my own words)','温度保持不变的原因(用自己的话说明)'],
+'고체':['Solid','固体'],'액체':['Liquid','液体'],'기체':['Gas','气体'],
+'고체 + 액체':['Solid + liquid','固体 + 液体'],'액체 + 기체':['Liquid + gas','液体 + 气体'],
+'고체와 액체가 함께 있어요':['Solid and liquid together','固体和液体同时存在'],'액체와 기체가 함께 있어요':['Liquid and gas together','液体和气体同时存在'],
+'융해':['Melting','熔化'],'응고':['Freezing','凝固'],'기화':['Vaporization','汽化'],'액화':['Condensation','液化'],'승화':['Sublimation','升华'],
+'끓는점':['Boiling point','沸点'],'어는점':['Freezing point','凝固点'],'녹는점':['Melting point','熔点'],
+'흡수':['Absorbed','吸收'],'방출':['Released','放出'],'출입 없음':['No transfer','没有进出'],'흡수 (빨강)':['Absorbed (red)','吸收(红色)'],'방출 (파랑)':['Released (blue)','放出(蓝色)'],
+'일정하다':['Stays constant','保持不变'],'활발해진다':['Becomes more active','变得更活跃'],'둔해진다':['Becomes less active','变得更迟缓'],
+'더 규칙적으로 변한다':['Becomes more regular','变得更有规律'],'더 불규칙하게 변한다':['Becomes more irregular','变得更无规律'],'변하지 않는다':['Does not change','不变'],
+'더 규칙적으로':['More regular','更有规律'],'더 불규칙하게':['More irregular','更无规律'],
+'멀어진다':['Gets farther apart','变远'],'가까워진다':['Gets closer','变近'],
+'계속 낮아진다':['Keeps falling','继续下降'],'높아진다':['Rises','升高'],
+'배열':['arrangement','排列'],'크기':['size','大小'],'개수':['number','数量'],'열에너지':['thermal energy','热能'],'공기':['air','空气'],'물':['water','水'],'부피':['volume','体积'],'색깔':['color','颜色'],
+'냉각 곡선 내려가기':['Down the Cooling Curve','走下冷却曲线'],'가열 곡선 올라가기':['Up the Heating Curve','登上加热曲线'],
+'기체에서 고체까지, 식으면서 생기는 변화':['From gas to solid: changes while cooling','从气体到固体:冷却时发生的变化'],
+'고체에서 기체까지, 데우면서 생기는 변화':['From solid to gas: changes while heating','从固体到气体:加热时发生的变化'],
+'물질이 상태 변화하는 동안':['During a change of state','物质状态变化时'],
+'입자의 운동':['Motion','粒子运动'],'입자의 배열':['Arrangement','粒子排列'],'입자 사이 거리':['Distance','粒子间距离'],
+'물질의 상태가 변하는 동안':['While the state changes,','物质状态变化时'],'열에너지를 방출하므로':['energy is released, so','放出热能,所以'],'냉각 중에도 온도가':['the temperature','冷却时温度'],
+/* 문항: 냉각 */
+'온도계의 위쪽 빈칸이에요. 기체가 액체로 변하는 동안 머무는 이 온도는 액체가 끓을 때의 온도와 같아요. 이름이 무엇일까요?':['This is the upper blank on the thermometer. The temperature stays here while a gas turns into a liquid. It is the same as the temperature at which the liquid boils. What is it called?','这是温度计上方的空格。气体变成液体时,温度停留在这里,它和液体沸腾时的温度相同。这个温度叫什么?'],
+'물이 100 ℃에서 부글부글할 때의 온도를 뭐라고 부르는지 떠올려 보세요. ○○점이에요.':['Think of what we call the temperature at which water bubbles at 100 ℃.','想一想,水在 100 ℃ 沸腾时的温度叫什么。'],
+'액체가 끓는 온도와 기체가 액체로 변하는 온도는 같아요.':['The temperature at which a liquid boils is the same as the temperature at which its gas turns into liquid.','液体沸腾的温度和气体变成液体的温度相同。'],
+'기체가 액체로 변하는 상태 변화의 이름은 무엇일까요?':['What is the change of state from gas to liquid called?','气体变成液体的状态变化叫什么?'],
+'욕실 거울에 물방울이 맺히는 현상이에요. 무엇이 되는 변화인지 생각해 보세요.':['This is what makes water drops form on a bathroom mirror. Think about what the gas turns into.','浴室镜子上出现水珠就是这种现象。想一想气体变成了什么。'],
+'기체가 액체(液)가 되니 액화(液化)예요.':['Gas becoming liquid is called condensation.','气体变成液体(液),所以叫液化。'],
+'응고는 다른 구간의 변화예요. 지금은 기체에서 액체로 변하고 있어요.':['That change happens in another part of the curve. Here, gas is turning into liquid.','那是另一段曲线的变化。现在是气体变成液体。'],
+'기화는 반대 방향이에요. 지금은 온도가 내려가고 있어요.':['That goes the opposite way. The temperature is falling here.','方向相反。现在温度正在下降。'],
+'기체가 액체로 변할 때 열에너지는 어떻게 될까요?':['What happens to thermal energy when a gas turns into a liquid?','气体变成液体时,热能会怎样?'],
+'곡선의 파란 화살표 방향을 보세요. 물질에서 어디로 향하나요?':['Look at the blue arrow on the curve. Which way does it point from the substance?','看曲线上的蓝色箭头。它从物质指向哪里?'],
+'냉각되는 물질은 상태가 변하는 동안에도 열에너지를 내보내요.':['A cooling substance keeps giving out thermal energy even while its state changes.','冷却的物质在状态变化时也会放出热能。'],
+'열에너지를 내보내는데 곡선이 평평해요. 상태가 변하는 동안 온도는 어떻게 될까요?':['Energy is leaving, but the curve is flat. What happens to the temperature while the state changes?','物质在放出热能,曲线却是平的。状态变化时温度会怎样?'],
+'캐릭터가 걷는 길의 높이를 보세요. 곡선의 높이가 바로 온도예요.':['Look at the height of the path. The height of the curve is the temperature.','看角色走的路有多高。曲线的高度就是温度。'],
+'상태가 변하며 나온 열에너지가 온도가 내려가는 것을 막아서, 평평한 구간이 생겨요.':['Energy released by the change of state stops the temperature from falling, so the curve is flat.','状态变化放出的热能阻止了温度下降,所以曲线出现平的部分。'],
+'기체가 액체로 변하는 동안 입자의 운동은 어떻게 될까요?':['What happens to particle motion while a gas turns into a liquid?','气体变成液体时,粒子运动会怎样?'],
+'왼쪽 온도계를 보세요. 온도는 입자 운동이 얼마나 활발한지를 나타내요. 지금 온도는 어떤가요?':['Look at the thermometer. Temperature shows how active the particles are. What is the temperature doing now?','看温度计。温度表示粒子运动的活跃程度。现在温度怎么样?'],
+'온도가 그대로이니 입자 운동의 활발한 정도도 그대로예요. 상태 변화에서 달라지는 것은 배열과 거리예요.':['The temperature stays the same, so particle activity stays the same too. What changes is the arrangement and the distance.','温度不变,粒子运动的活跃程度也不变。状态变化时改变的是排列和距离。'],
+'열에너지를 흡수한 입자를 떠올려 보세요.':['Think of particles that have absorbed thermal energy.','想一想吸收了热能的粒子。'],
+'열에너지를 방출한 입자를 떠올려 보세요.':['Think of particles that have released thermal energy.','想一想放出了热能的粒子。'],
+'열에너지를 흡수하면 입자 운동이 활발해져요.':['Absorbing thermal energy makes particles more active.','吸收热能后,粒子运动变得更活跃。'],
+'열에너지를 방출하면 입자 운동이 둔해져요.':['Releasing thermal energy makes particles less active.','放出热能后,粒子运动变得更迟缓。'],
+'기체가 액체로 변하는 동안 입자의 배열은 어떻게 될까요?':['What happens to the particle arrangement while a gas turns into a liquid?','气体变成液体时,粒子的排列会怎样?'],
+'위의 입자 관찰창을 보세요. 입자들이 흩어져 있었나요, 모이고 있나요?':['Look at the particle window. Are the particles spreading out or gathering together?','看粒子观察窗。粒子是在散开,还是在聚集?'],
+'흩어져 날아다니던 입자들이 서로 모이면서 배열이 더 규칙적으로 변해요.':['Particles that were flying apart gather together, so the arrangement becomes more regular.','四处飞散的粒子聚集在一起,排列变得更有规律。'],
+'기체가 액체로 변하는 동안 입자 사이의 거리는 어떻게 될까요?':['What happens to the distance between particles while a gas turns into a liquid?','气体变成液体时,粒子之间的距离会怎样?'],
+'기체 입자와 액체 입자 중 어느 쪽이 더 붙어 있나요?':['Which are closer together: gas particles or liquid particles?','气体粒子和液体粒子,哪一种靠得更近?'],
+'액화할 때는 입자 사이 거리가 가까워져요. 입자 자체의 크기는 변하지 않아요.':['In condensation, particles get closer together. The particles themselves do not change size.','液化时粒子之间的距离变近。粒子本身的大小不变。'],
+'온도계의 아래쪽 빈칸이에요. 액체가 고체로 변하는 동안 머무는 이 온도의 이름은 무엇일까요?':['This is the lower blank on the thermometer. The temperature stays here while a liquid turns into a solid. What is it called?','这是温度计下方的空格。液体变成固体时,温度停留在这里。这个温度叫什么?'],
+'물이 얼음이 되는 0 ℃를 물의 ○○점이라고 불러요.':['Water turns into ice at 0 ℃. What do we call this temperature?','水在 0 ℃ 变成冰。这个温度叫什么?'],
+'어는점과 녹는점은 같은 온도예요. 같은 물질이면 둘의 값이 같아요.':['The freezing point and melting point of a substance are the same temperature.','同一种物质的凝固点和熔点是相同的温度。'],
+'액체가 고체로 변하는 상태 변화의 이름은 무엇일까요?':['What is the change of state from liquid to solid called?','液体变成固体的状态变化叫什么?'],
+'촛농이 굳는 현상이에요. 엉겨서 굳어진다는 뜻의 두 글자 말이에요.':['This is what happens when melted candle wax hardens.','蜡烛的蜡油变硬就是这种现象。'],
+'엉겨서 굳어진다는 뜻의 응고(凝固)예요.':['A liquid becoming a solid is called freezing, or solidification.','液体凝结变硬,所以叫凝固。'],
+'액화는 기체가 액체로 변하는 것이에요. 지금은 액체가 고체로 변해요.':['That is gas turning into liquid. Here, liquid is turning into solid.','那是气体变成液体。现在是液体变成固体。'],
+'융해는 반대 방향이에요. 지금은 온도가 내려가고 있어요.':['That goes the opposite way. The temperature is falling here.','方向相反。现在温度正在下降。'],
+'액체가 고체로 변할 때 열에너지는 어떻게 될까요?':['What happens to thermal energy when a liquid turns into a solid?','液体变成固体时,热能会怎样?'],
+'온도가 일정하다고 열에너지 출입까지 없는 것은 아니에요. 화살표 방향을 보세요.':['A constant temperature does not mean no energy moves. Look at the arrow.','温度不变不代表没有热能进出。看箭头的方向。'],
+'액화와 응고는 모두 열에너지를 방출해요. 그래서 물이 얼 때 주변이 덜 추워져요.':['Condensation and freezing both release thermal energy. That is why the surroundings feel less cold when water freezes.','液化和凝固都会放出热能。所以水结冰时,周围没那么冷。'],
+'첫째 빈칸: 상태가 변할 때 입자의 무엇이 바뀔까요?':['First blank: what changes about the particles when the state changes?','第一个空:状态变化时,粒子的什么发生改变?'],
+'상태가 변해도 입자 자체는 그대로예요. 입자가 놓인 모습을 떠올려 보세요.':['The particles themselves stay the same. Think about how they are placed.','粒子本身不变。想一想粒子是怎样分布的。'],
+'입자의 크기와 개수는 그대로이고, 배열이 바뀌어요.':['The size and number of particles stay the same. The arrangement changes.','粒子的大小和数量不变,改变的是排列。'],
+'둘째 빈칸: 입자 배열이 바뀌면서 밖으로 나오는 것은 무엇일까요?':['Second blank: what comes out as the particle arrangement changes?','第二个空:粒子排列改变时,放出来的是什么?'],
+'지도의 화살표 옆에 쓰여 있는 말이에요.':['It is the word written next to the arrows on the map.','就是地图上箭头旁边写的词。'],
+'상태가 변할 때 나온 열에너지가 식는 것을 막아 줘요.':['The thermal energy released during the change of state stops the substance from cooling.','状态变化时放出的热能阻止物质继续变冷。'],
+'셋째 빈칸: 곡선의 평평한 구간에서 일정한 것은 무엇일까요?':['Third blank: what stays constant on the flat part of the curve?','第三个空:曲线平的部分,什么保持不变?'],
+'곡선의 세로축에 무엇이라고 쓰여 있었는지 떠올려 보세요.':['Remember what the vertical axis of the curve shows.','想一想曲线的纵轴表示什么。'],
+'온도계는 고장 나지 않았어요. 온도가 일정한 데에는 이유가 있어요.':['The thermometer is not broken. There is a reason the temperature stays constant.','温度计没有坏。温度不变是有原因的。'],
+'계속 식히는데 온도가 안 내려가잖아? 온도계가 고장 났지? 크크크':['It keeps cooling, but the temperature will not drop! Your thermometer is broken, right? Heh heh heh','一直在冷却,温度却不下降?温度计坏了吧?嘿嘿嘿'],
+'상태가 변하는 동안 입자의 ':['While the state changes, the particles\' ','状态变化时,粒子的'],
+'이 바뀌면서 ':[' changes and ','发生改变,并放出'],
+'가 밖으로 나와요. 이 에너지가 식는 것을 막아 주어서 ':[' comes out. This energy stops the cooling, so the ','。这些能量阻止物质继续变冷,所以'],
+'가 낮아지지 않고 일정해요.':[' does not drop and stays constant.','不下降,保持不变。'],
+'로르산의 상태가 변하는 동안 온도가 일정하게 유지되는 까닭을 내 말로 써 보세요.':['In your own words, explain why the temperature stays constant while the state of lauric acid changes.','用自己的话说明:月桂酸状态变化时,温度为什么保持不变。'],
+/* 문항: 가열 */
+'온도계의 아래쪽 빈칸이에요. 고체가 액체로 변하는 동안 머무는 이 온도의 이름은 무엇일까요?':['This is the lower blank on the thermometer. The temperature stays here while a solid turns into a liquid. What is it called?','这是温度计下方的空格。固体变成液体时,温度停留在这里。这个温度叫什么?'],
+'얼음이 물로 녹는 0 ℃를 물의 ○○점이라고 불러요.':['Ice melts into water at 0 ℃. What do we call this temperature?','冰在 0 ℃ 熔化成水。这个温度叫什么?'],
+'고체가 녹는 온도가 녹는점이고, 어는점과 같은 온도예요.':['The temperature at which a solid melts is its melting point. It equals the freezing point.','固体熔化的温度叫熔点,它和凝固点相同。'],
+'고체가 액체로 변하는 상태 변화의 이름은 무엇일까요?':['What is the change of state from solid to liquid called?','固体变成液体的状态变化叫什么?'],
+'녹는다는 뜻의 두 글자 말이에요. 설탕이 물에 녹는 것과는 다른 낱말이에요.':['It is different from sugar dissolving in water.','这和糖溶解在水里不是同一个词。'],
+'고체가 녹아서 액체가 되는 변화가 융해(融解)예요.':['A solid turning into a liquid is called melting.','固体变成液体的变化叫熔化。'],
+'비슷하지만 달라요! 용해는 설탕이 물에 녹는 것처럼 물질이 섞이는 현상이에요. 첫 글자가 달라요.':['Close, but different! Dissolving is when a substance mixes into another, like sugar in water.','很接近,但不同!溶解是物质混入另一种物质,比如糖溶解在水里。'],
+'응고는 반대 방향이에요. 지금은 온도가 올라가고 있어요.':['That goes the opposite way. The temperature is rising here.','方向相反。现在温度正在上升。'],
+'기화는 다른 구간의 변화예요. 지금은 고체가 액체로 변해요.':['That change happens in another part of the curve. Here, solid is turning into liquid.','那是另一段曲线的变化。现在是固体变成液体。'],
+'고체가 액체로 변할 때 열에너지는 어떻게 될까요?':['What happens to thermal energy when a solid turns into a liquid?','固体变成液体时,热能会怎样?'],
+'불은 계속 켜져 있어요. 빨간 화살표 방향을 보세요.':['The flame is still on. Look at the red arrow.','火一直开着。看红色箭头的方向。'],
+'온도가 일정해도 열에너지는 계속 들어와요.':['Thermal energy keeps coming in even when the temperature is constant.','即使温度不变,热能也在不断进入。'],
+'온도계의 위쪽 빈칸이에요. 액체가 끓어서 기체로 변하는 동안 머무는 이 온도의 이름은 무엇일까요?':['This is the upper blank on the thermometer. The temperature stays here while a liquid boils into a gas. What is it called?','这是温度计上方的空格。液体沸腾变成气体时,温度停留在这里。这个温度叫什么?'],
+'물은 100 ℃에서 부글부글해요. 이때의 온도를 ○○점이라고 불러요.':['Water bubbles at 100 ℃. What do we call this temperature?','水在 100 ℃ 沸腾。这个温度叫什么?'],
+'끓는 동안에는 불을 세게 해도 온도가 끓는점에 머물러요.':['While a liquid boils, the temperature stays at the boiling point even with a stronger flame.','沸腾时,即使把火开大,温度也停留在沸点。'],
+'액체가 기체로 변하는 상태 변화의 이름은 무엇일까요?':['What is the change of state from liquid to gas called?','液体变成气体的状态变化叫什么?'],
+'젖은 빨래가 마르는 현상이에요. 무엇이 되는 변화인지 생각해 보세요.':['This is what happens when wet laundry dries. Think about what the liquid turns into.','湿衣服变干就是这种现象。想一想液体变成了什么。'],
+'액체가 기체(氣)가 되니 기화(氣化)예요.':['Liquid becoming gas is called vaporization.','液体变成气体(气),所以叫汽化。'],
+'액화는 반대 방향이에요. 지금은 온도가 올라가고 있어요.':['That goes the opposite way. The temperature is rising here.','方向相反。现在温度正在上升。'],
+'융해는 다른 구간의 변화예요. 지금은 액체가 기체로 변해요.':['That change happens in another part of the curve. Here, liquid is turning into gas.','那是另一段曲线的变化。现在是液体变成气体。'],
+'증발도 기화의 한 종류예요. 이 칸에는 상태 변화의 이름을 쓰세요.':['Evaporation is one kind of this change. Write the name of the change of state here.','蒸发是这种变化的一种。这里请写状态变化的名称。'],
+'끓음도 기화의 한 종류예요. 이 칸에는 상태 변화의 이름을 쓰세요.':['Boiling is one kind of this change. Write the name of the change of state here.','沸腾是这种变化的一种。这里请写状态变化的名称。'],
+'액체가 기체로 변할 때 열에너지는 어떻게 될까요?':['What happens to thermal energy when a liquid turns into a gas?','液体变成气体时,热能会怎样?'],
+'평평한 구간에서도 불은 켜져 있어요. 그 열에너지는 어디로 갈까요?':['The flame is on during the flat part too. Where does that thermal energy go?','平的部分火也开着。这些热能去了哪里?'],
+'융해와 기화는 모두 열에너지를 흡수해요.':['Melting and vaporization both absorb thermal energy.','熔化和汽化都吸收热能。'],
+'액체가 기체로 변하는 동안 입자의 운동은 어떻게 될까요?':['What happens to particle motion while a liquid turns into a gas?','液体变成气体时,粒子运动会怎样?'],
+'액체가 기체로 변하는 동안 입자의 배열은 어떻게 될까요?':['What happens to the particle arrangement while a liquid turns into a gas?','液体变成气体时,粒子的排列会怎样?'],
+'위의 입자 관찰창을 보세요. 입자들이 모여 있나요, 흩어지고 있나요?':['Look at the particle window. Are the particles gathered together or spreading out?','看粒子观察窗。粒子是聚在一起,还是在散开?'],
+'입자들이 서로 떨어져 나가면서 배열이 더 불규칙해져요.':['Particles move away from each other, so the arrangement becomes more irregular.','粒子彼此分开,排列变得更无规律。'],
+'액체가 기체로 변하는 동안 입자 사이의 거리는 어떻게 될까요?':['What happens to the distance between particles while a liquid turns into a gas?','液体变成气体时,粒子之间的距离会怎样?'],
+'액체 입자와 기체 입자 중 어느 쪽이 더 떨어져 있나요?':['Which are farther apart: liquid particles or gas particles?','液体粒子和气体粒子,哪一种离得更远?'],
+'기화할 때는 입자 사이 거리가 멀어져요. 입자 자체의 크기는 변하지 않아요.':['In vaporization, particles get farther apart. The particles themselves do not change size.','汽化时粒子之间的距离变远。粒子本身的大小不变。'],
+'1번 입자 모형은 어떤 상태일까요?':['What state does particle model 1 show?','1 号粒子模型是什么状态?'],
+'입자가 어떻게 놓여 있나요? 줄을 맞추어 빽빽한가요?':['How are the particles placed? Are they packed in neat rows?','粒子是怎样分布的?是否整齐紧密地排列?'],
+'입자가 규칙적으로 빽빽하게 놓이면 고체예요.':['Particles packed tightly in a regular pattern mean a solid.','粒子紧密而有规律地排列,就是固体。'],
+'2번 입자 모형은 어떤 상태일까요?':['What state does particle model 2 show?','2 号粒子模型是什么状态?'],
+'입자들이 가깝지만 줄이 맞지 않아요.':['The particles are close, but not in neat rows.','粒子靠得很近,但排列不整齐。'],
+'입자가 가깝지만 배열이 불규칙하면 액체예요.':['Particles that are close but irregular mean a liquid.','粒子靠得近但排列无规律,就是液体。'],
+'3번 입자 모형은 어떤 상태일까요?':['What state does particle model 3 show?','3 号粒子模型是什么状态?'],
+'입자 사이가 아주 멀고 자유롭게 움직여요.':['The particles are very far apart and move freely.','粒子之间距离很远,自由运动。'],
+'입자 사이가 매우 멀고 자유롭게 움직이면 기체예요.':['Particles very far apart and moving freely mean a gas.','粒子相距很远并自由运动,就是气体。'],
+'입자 사이가 멀어지는 쪽인지, 가까워지는 쪽인지 살펴보세요.':['Check whether the particles move farther apart or closer together.','看看粒子之间是变远还是变近。'],
+'입자 사이가 멀어지는 변화는 열에너지를 흡수해요.':['Changes that move particles farther apart absorb thermal energy.','使粒子变远的变化吸收热能。'],
+'입자 사이가 가까워지는 변화는 열에너지를 방출해요.':['Changes that bring particles closer together release thermal energy.','使粒子变近的变化放出热能。'],
+'첫째 빈칸: 불을 켜서 물질에 가해 주는 것은 무엇일까요?':['First blank: what does the flame give to the substance?','第一个空:用火加热时,物质得到了什么?'],
+'불을 켜 두는 동안 열에너지는 계속 들어와요.':['Thermal energy keeps coming in while the flame is on.','开着火时,热能不断进入。'],
+'둘째 빈칸: 그 에너지는 입자의 무엇을 바꾸는 데 쓰일까요?':['Second blank: what about the particles does that energy change?','第二个空:这些能量用来改变粒子的什么?'],
+'불을 계속 켜 놨는데 온도가 멈췄네? 온도계가 고장 났지? 크크크':['The flame is on, but the temperature stopped! Your thermometer is broken, right? Heh heh heh','火一直开着,温度却停了?温度计坏了吧?嘿嘿嘿'],
+'상태가 변하는 동안 가해 준 ':['During a change of state, the added ','状态变化时,加入的'],
+'는 입자의 ':[' is used to change the particles\' ','用来改变粒子的'],
+'을 바꾸는 데 쓰여요. 그래서 ':['. So the ','。所以'],
+'가 높아지지 않고 일정해요.':[' does not rise and stays constant.','不升高,保持不变。'],
+'물의 상태가 변하는 동안 온도가 일정하게 유지되는 까닭을 열에너지 출입과 관련지어 내 말로 써 보세요.':['In your own words, explain why the temperature stays constant while the state of water changes. Use the movement of thermal energy in your answer.','用自己的话说明:水状态变化时,温度为什么保持不变。请联系热能的进出来回答。']
+};
+/* 쓰기 칸은 어느 언어로 써도 인정한다 */
+const ACCEPT={
+'끓는점':['boiling point','boil point','condensation point','沸点','液化点'],
+'어는점':['freezing point','melting point','凝固点','熔点'],
+'녹는점':['melting point','freezing point','熔点','凝固点'],
+'액화':['condensation','liquefaction','condensing','condense','液化'],
+'응고':['freezing','solidification','solidifying','freeze','凝固'],
+'융해':['melting','melt','fusion','熔化','融化','熔解'],
+'기화':['vaporization','vaporisation','vaporizing','vaporize','汽化','气化']
+};
+/* 다른 언어로 쓴 오답을 한국어 오답 안내로 연결한다 */
+const ALIAS={'dissolving':'용해','dissolve':'용해','dissolution':'용해','溶解':'용해','condensation':'액화','liquefaction':'액화','液化':'액화','freezing':'응고','solidification':'응고','凝固':'응고','melting':'융해','熔化':'융해','融化':'융해','vaporization':'기화','vaporisation':'기화','汽化':'기화','气化':'기화','evaporation':'증발','蒸发':'증발','boiling':'끓음','沸腾':'끓음'};
+const REQUIRED=[
+  {ko:'상태 변화',en:'change of state',zh:'状态变化',alt:['state change','phase change','states change','state changes','物态变化','状态改变','状态发生变化']},
+  {ko:'온도',en:'temperature',zh:'温度',alt:[]},
+  {ko:'열에너지',en:'thermal energy',zh:'热能',alt:['heat energy','热量']},
+  {ko:'입자',en:'particle',zh:'粒子',alt:[]}
+];
+const lang=()=>S.lang||'ko';
+const w=s=>{const i=['en','zh'].indexOf(lang());return i<0||s==null?s:((DICT[s]&&DICT[s][i])||s);};
+const FMT={
+  who:{ko:(c,n,x)=>`${c}반 ${n}번 ${x}`,en:(c,n,x)=>`Class ${c}, No. ${n}, ${x}`,zh:(c,n,x)=>`${c}班 ${n}号 ${x}`},
+  run:{ko:(i,n)=>`${i} / ${n}칸 진행 · 이어하기`,en:(i,n)=>`${i} / ${n} blanks · Continue`,zh:(i,n)=>`已完成 ${i} / ${n} 格 · 继续`},
+  done:{ko:(a,b)=>`완주! ${a} / ${b}점 · 다시 보기`,en:(a,b)=>`Finished! ${a} / ${b} pts · View`,zh:(a,b)=>`完成!${a} / ${b} 分 · 查看`},
+  combo:{ko:n=>`${n}연속 한 번에!`,en:n=>`${n} in a row!`,zh:n=>`连续答对 ${n} 格!`},
+  worth:{ko:n=>`맞히면 ${n}점`,en:n=>`Worth ${n} pts`,zh:n=>`答对得 ${n} 分`},
+  got:{ko:n=>`+${n}점`,en:n=>`+${n} pts`,zh:n=>`+${n} 分`},
+  step:{ko:(l,n,t)=>`${l} · ${n} / ${t}칸`,en:(l,n,t)=>`${l} · ${n} / ${t}`,zh:(l,n,t)=>`${l} · 第 ${n} / ${t} 格`},
+  wrong:{ko:n=>`아직 아니에요. 다시 생각해 보세요. (${n}번 틀림)`,en:n=>`Not yet. Think again. (${n} wrong)`,zh:n=>`还不对,再想一想。(错了 ${n} 次)`},
+  first:{ko:x=>`첫 글자는 '${x}'이에요.`,en:x=>`It starts with "${x}".`,zh:x=>`第一个字是“${x}”。`},
+  title:{ko:(n,t)=>`${n} 대원, ${t} 완주!`,en:(n,t)=>`Well done, ${n}! You finished ${t}.`,zh:(n,t)=>`${n} 队员,完成了“${t}”!`},
+  grade:{ko:x=>`1학년 ${x}`,en:x=>`Grade 1, ${x}`,zh:x=>`一年级 ${x}`},
+  when:{ko:(t,M,D,h,m,r)=>`${t} · ${M}월 ${D}일 ${h}시 ${m}분 · ${r}번째 도전`,en:(t,M,D,h,m,r)=>`${t} · ${M}/${D} ${h}:${m} · Attempt ${r}`,zh:(t,M,D,h,m,r)=>`${t} · ${M}月${D}日 ${h}:${m} · 第 ${r} 次挑战`},
+  max:{ko:n=>`/ ${n}점`,en:n=>`/ ${n} pts`,zh:n=>`/ ${n} 分`},
+  firstN:{ko:(a,b)=>`한 번에 맞힌 칸  ${a} / ${b}`,en:(a,b)=>`First-try blanks  ${a} / ${b}`,zh:(a,b)=>`一次答对  ${a} / ${b} 格`},
+  hints:{ko:n=>`힌트를 본 칸  ${n}칸`,en:n=>`Blanks with hints  ${n}`,zh:n=>`看过提示  ${n} 格`},
+  comboBadge:{ko:n=>`콤보 왕: ${n}연속 한 번에`,en:n=>`Combo king: ${n} in a row`,zh:n=>`连击王:连续答对 ${n} 格`},
+  no:{ko:n=>`${n}번`,en:n=>`No. ${n}`,zh:n=>`${n} 号`},
+  arrow:{ko:(d,x)=>`깜빡이는 화살표(${d})에 색을 칠해 보세요. ${x}할 때 열에너지는 어떻게 될까요?`,en:(d,x)=>`Color the blinking arrow (${d}). In ${x.toLowerCase()}, what happens to thermal energy?`,zh:(d,x)=>`给闪烁的箭头(${d})涂色。${x}时,热能会怎样?`},
+  deposit:{ko:(d)=>`깜빡이는 화살표(${d})에 색을 칠해 보세요. 승화할 때 열에너지는 어떻게 될까요?`,en:(d)=>`Color the blinking arrow (${d}). When a gas turns directly into a solid, what happens to thermal energy?`,zh:(d)=>`给闪烁的箭头(${d})涂色。气体直接变成固体时,热能会怎样?`},
+  korean:{ko:x=>'',en:x=>` (Korean: ${x})`,zh:x=>`(韩语:${x})`}
+};
+const F=(k,...a)=>FMT[k][lang()](...a);
+const dw=t=>t==='열에너지'&&lang()==='en'?'Energy':w(t);
+
+/* ===== 저장 ===== */
+const KEY='ipja-wondae-v1';
+const blankRun=(tries=1)=>({i:0,wrong:{},pts:{},text:'',phase:'play',combo:0,best:0,tries});
+let S={cls:'',num:'',name:'',sound:false,runs:{}};
+try{const r=localStorage.getItem(KEY); if(r) S={...S,...JSON.parse(r)};}catch(e){}
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}};
+
+/* ===== 공통 ===== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s).replace(/\s+/g,'').toLowerCase();
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const earned=wrong=>Math.max(FLOOR,FULL-wrong);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+let FONT_D='Jua, "Gothic A1", sans-serif', FONT_B='"Gothic A1", sans-serif';
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* 효과음 */
+let ac=null;
+function tone(seq){
+  if(!S.sound) return;
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    let t=ac.currentTime;
+    seq.forEach(([f,d])=>{const o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.13,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+d);t+=d*.7;});
+  }catch(e){}
+}
+const sfx={ok:()=>tone([[523,.12],[659,.12],[784,.2]]),no:()=>tone([[196,.25]]),win:()=>tone([[523,.14],[659,.14],[784,.14],[1047,.4]])};
+
+/* ===== 입자 시뮬레이션 =====
+   입자끼리 인력과 반발력을 주고받는 분자 동역학 계산.
+   m: 0 고체, 1 액체, 2 기체. 사이 값이면 일부 입자만 상태가 바뀌어 두 상태가 함께 있다.
+   입자 빠르기는 온도 t로만 정하고, 인력 세기만 상태에 따라 바꾸므로
+   상태 변화 구간에서는 빠르기가 일정한 채 배열과 거리만 달라진다. */
+const TSTAR=[.18,.5,4];
+class Sim{
+  constructor(cv,N=72){
+    this.cv=cv;this.W=400;this.H=200;this.sg=14;this.Lx=this.W/this.sg;this.Ly=this.H/this.sg;
+    this.m=0;this.t=.1;this.bonds=false;this.paused=false;this.view=null;this.ps=[];
+    const cols=9,gap=1.12,left=this.Lx/2-(cols-1)*gap/2;
+    for(let i=0;i<N;i++){
+      const row=Math.floor(i/cols),c=i%cols;
+      this.ps.push({hx:left+c*gap+(row%2?gap/4:-gap/4),hy:this.Ly-.7-row*gap*.87,x:0,y:0,vx:0,vy:0,fx:0,fy:0,th:(i*.618%1)*.96+.02,th2:(i*.382%1)*.96+.02,e:1,s:0});
+    }
+    this.seed(0);
+  }
+  kT(){return .08+.9*this.t;}
+  seed(m){
+    this.m=m;const v=Math.sqrt(this.kT());
+    this.ps.forEach((p,i)=>{
+      if(m>1.5){p.x=1+(i%9)*(this.Lx-2)/8;p.y=1+Math.floor(i/9)*(this.Ly-2)/6.2;}else{p.x=p.hx;p.y=p.hy;}
+      const a=Math.random()*6.28;p.vx=Math.cos(a)*v;p.vy=Math.sin(a)*v;
+    });
+  }
+  phase(p){return this.m<=1?(this.m>p.th?1:0):(this.m-1>p.th2?2:1);}
+  step(h){
+    const{ps,Lx,Ly}=this,kT=this.kT(),n=ps.length;
+    for(let i=0;i<n;i++){const p=ps[i];p.s=this.phase(p);p.e=kT/TSTAR[p.s];p.fx=0;p.fy=p.s===2?0:.3;
+      if(p.s===0){p.fx+=14*(p.hx-p.x);p.fy+=14*(p.hy-p.y);}}
+    for(let i=0;i<n;i++){
+      const a=ps[i];
+      for(let j=i+1;j<n;j++){
+        const b=ps[j],dx=b.x-a.x,dy=b.y-a.y;let r2=dx*dx+dy*dy;
+        if(r2>6.25) continue;
+        let e=Math.sqrt(a.e*b.e);
+        if(r2<1.26) e=Math.max(e,.4);
+        r2=Math.max(r2,.55);
+        const q=1/r2,q6=q*q*q,f=24*e*q6*(2*q6-1)*q;
+        a.fx-=f*dx;a.fy-=f*dy;b.fx+=f*dx;b.fy+=f*dy;
+      }
+    }
+    for(let i=0;i<n;i++){
+      const p=ps[i];p.vx+=p.fx*h;p.vy+=p.fy*h;p.x+=p.vx*h;p.y+=p.vy*h;
+      if(p.x<.45){p.x=.45;p.vx=Math.abs(p.vx);} if(p.x>Lx-.45){p.x=Lx-.45;p.vx=-Math.abs(p.vx);}
+      if(p.y<.45){p.y=.45;p.vy=Math.abs(p.vy);} if(p.y>Ly-.45){p.y=Ly-.45;p.vy=-Math.abs(p.vy);}
+    }
+  }
+  thermostat(){
+    const{ps}=this,kT=this.kT();let sum=0;ps.forEach(p=>sum+=p.vx*p.vx+p.vy*p.vy);
+    const cur=sum/(2*ps.length)||1e-3,l=clamp(Math.sqrt(1+.15*(kT/cur-1)),.8,1.2);
+    ps.forEach(p=>{p.vx*=l;p.vy*=l;const v=Math.hypot(p.vx,p.vy);if(v>6){p.vx*=6/v;p.vy*=6/v;}});
+  }
+  draw(cv){
+    const c=cv.getContext('2d'),k=cv.width/this.W,sg=this.sg,{ps}=this;
+    c.setTransform(k,0,0,k,0,0);c.clearRect(0,0,this.W,this.H);
+    if(this.bonds){
+      c.lineCap='round';
+      for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){
+        const a=ps[i],b=ps[j];if(a.s===2||b.s===2) continue;
+        const d=Math.hypot(a.x-b.x,a.y-b.y);if(d>1.55) continue;
+        c.strokeStyle=`rgba(242,84,45,${(.95-(d-.9)*1.2).toFixed(2)})`;c.lineWidth=a.s===0&&b.s===0?2:1.2;
+        c.beginPath();c.moveTo(a.x*sg,a.y*sg);c.lineTo(b.x*sg,b.y*sg);c.stroke();
+      }
+    }
+    c.fillStyle='#1414e6';
+    ps.forEach(p=>{c.beginPath();c.arc(p.x*sg,p.y*sg,5,0,6.29);c.fill();});
+  }
+  frame(){
+    if(!this.paused){for(let i=0;i<6;i++)this.step(.01);this.thermostat();}
+    this.draw(this.cv);if(this.view)this.draw(this.view);
+  }
+}
+
+/* 첫 화면 입자 */
+const heroBox=new Sim($('heroCv'),42);
+const heroLabels=['고체','고체 + 액체','액체','액체 + 기체','기체'];
+let heroAt=0;
+const scope=new Sim($('scopeCv'));
+function loop(now){
+  if(!$('vHome').hidden){
+    heroAt=(heroAt+.0018)%4;
+    const m=heroAt<2?heroAt:4-heroAt;
+    heroBox.m=m;heroBox.t=.15+.3*m;
+    const near=Math.abs(m-Math.round(m))<.08;
+    $('heroCap').textContent=w(near?['고체','액체','기체'][Math.round(m)]:heroLabels[m<1?1:3]);
+    heroBox.frame();
+  }
+  if(labOn){
+    if(scope.m!==labM){const d=labM-scope.m;scope.m=Math.abs(d)<.01?labM:scope.m+Math.sign(d)*.006;}
+    scope.t+=(LAB_T[Math.round(labM)]-scope.t)*.02;
+    $('labNow').textContent=w(stateLabel(scope.m));
+  }
+  if(!$('vGame').hidden||labOn) scope.frame();
+  requestAnimationFrame(loop);
+}
+
+/* ===== 지도 ===== */
+const NS='viewBox="0 0 760 480" xmlns="http://www.w3.org/2000/svg"';
+const pt=(pts,s)=>{const i=clamp(Math.floor(s),0,4),f=clamp(s-i,0,1);return[pts[i][0]+(pts[i+1][0]-pts[i][0])*f,pts[i][1]+(pts[i+1][1]-pts[i][1])*f];};
+const mAt=(key,s)=>{const i=clamp(Math.floor(s),0,4),f=clamp(s-i,0,1);const up=[0,f,1,1+f,2][i];return key==='heat'?up:[2,2-f,1,1-f,0][i];};
+const tempAt=(pts,s)=>clamp((445-pt(pts,s)[1])/395,0,1);
+const stateLabel=m=>{const e=1e-3;if(m<e)return'고체';if(Math.abs(m-1)<e)return'액체';if(m>2-e)return'기체';return m<1?'고체와 액체가 함께 있어요':'액체와 기체가 함께 있어요';};
+const stateName=(key,s)=>w(stateLabel(mAt(key,s)));
+const fillOf=f=>f==='cold'?'var(--cold)':'var(--heat)';
+
+function mapSVG(c,run){
+  const pts=c.pts.map(p=>p.join(',')).join(' ');
+  const dots=[...new Set(['low','top'])].map(k=>{const s=c.slots[k];return`<line x1="${s.x+s.w/2}" y1="${s.y}" x2="${c.pts[k==='low'&&c.key==='heat'||k==='top'&&c.key==='cool'?1:3][0]}" y2="${s.y}" stroke="var(--ink)" stroke-width="2" stroke-dasharray="3 5"/>`;}).join('');
+  const deco=c.deco.map(d=>{
+    if(d.rect)return`<rect x="${d.rect[0]}" y="${d.rect[1]}" width="${d.rect[2]}" height="${d.rect[3]}" rx="12" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.5"/>`;
+    if(d.poly)return`<polygon points="${d.poly.map(p=>p.join(',')).join(' ')}" fill="${fillOf(d.fill)}" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>`;
+    return`<text x="${d.x}" y="${d.y}" text-anchor="${d.end?'end':'start'}" font-size="${d.size}" font-weight="800" fill="var(--ink)" font-family="var(--body)">${dw(d.text)}</text>`;
+  }).join('');
+  const states=c.states.map(([t,x,y])=>`<g><rect x="${x-26}" y="${y-14}" width="52" height="28" rx="14" fill="var(--accent-soft)" stroke="var(--ink)" stroke-width="2"/><text x="${x}" y="${y+1}" text-anchor="middle" dominant-baseline="central" font-size="${lang()==='en'?13:15}" font-family="var(--display)" fill="var(--ink)">${w(t)}</text></g>`).join('');
+  const slots=Object.keys(c.slots).map(k=>{const s=c.slots[k];return`<g class="slot" id="slot-${k}"><rect x="${s.x-s.w/2}" y="${s.y-s.h/2}" width="${s.w}" height="${s.h}" rx="9"/><text x="${s.x}" y="${s.y+1}">?</text><circle class="ptc" cx="${s.x+s.w/2-2}" cy="${s.y-s.h/2+2}" r="0"/><text class="pt" x="${s.x+s.w/2-2}" y="${s.y-s.h/2+3}"></text></g>`;}).join('');
+  return`<svg ${NS} role="img" aria-label="${c.title} 지도">
+    <line x1="150" y1="20" x2="150" y2="462" stroke="var(--ink)" stroke-width="3"/>
+    <line x1="150" y1="462" x2="748" y2="462" stroke="var(--ink)" stroke-width="3"/>
+    <text x="744" y="477" text-anchor="end" font-size="13" font-weight="800" fill="var(--ink-soft)" font-family="var(--body)">${w('시간')}</text>
+    <rect x="32" y="26" width="22" height="412" rx="11" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+    <rect id="merc" x="37" y="430" width="12" height="4" fill="var(--heat)"/>
+    <circle cx="43" cy="448" r="19" fill="var(--heat)" stroke="var(--ink)" stroke-width="3"/>
+    <text x="144" y="30" text-anchor="end" font-size="13" font-weight="800" fill="var(--ink-soft)" font-family="var(--body)">${w('온도')}</text>
+    ${dots}${deco}
+    <polyline points="${pts}" fill="none" stroke="var(--grid)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline id="trail" points="" fill="none" stroke="var(--accent)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+    ${states}${slots}
+    <g id="hero"><circle r="16" fill="var(--sun)" stroke="var(--ink)" stroke-width="3"/><circle cx="-5" cy="-3" r="3" fill="var(--ink)"/><circle cx="6" cy="-3" r="3" fill="var(--ink)"/><path d="M-5 6q5 5 10 0" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/></g>
+  </svg>`;
+}
+
+function dotsModel(kind,cx,cy,R){
+  let out=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="#fff" stroke="var(--ink)" stroke-width="3"/>`;
+  const dot=(x,y)=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7" fill="var(--sun)" stroke="var(--ink)" stroke-width="1.6"/>`;
+  if(kind===0){for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++){const x=cx+i*15,y=cy+j*15;if(Math.hypot(x-cx,y-cy)<R-9)out+=dot(x,y);}}
+  if(kind===1){[[-30,-22],[-8,-32],[18,-28],[36,-8],[-38,6],[-14,-8],[12,-4],[-26,28],[-2,18],[24,20],[6,40],[-12,40]].forEach(p=>out+=dot(cx+p[0],cy+p[1]));}
+  if(kind===2){[[-28,-24],[26,-30],[-6,20],[34,28]].forEach(p=>out+=dot(cx+p[0],cy+p[1]));}
+  return out;
+}
+const ARROWS=[ // 시작,끝,곡률: 고체(0)-액체(1)-기체(2)
+  [[230,412],[530,412],0],[[530,448],[230,448],0],
+  [[572,345],[442,152],0],[[414,136],[544,330],0],
+  [[188,345],[318,152],0],[[346,136],[216,330],0]
+];
+function triSVG(run,c){
+  const models=[[150,410],[610,410],[380,86]];
+  const items=c.items.filter(i=>i.view==='tri');
+  const arrows=ARROWS.map((a,i)=>{
+    const it=items.find(x=>x.arrow===i),done=run.pts[it.id]!=null;
+    const col=done?(it.show==='흡수'?'var(--heat)':'var(--cold)'):'var(--grid)';
+    return`<line id="arr-${i}" x1="${a[0][0]}" y1="${a[0][1]}" x2="${a[1][0]}" y2="${a[1][1]}" stroke="${col}" stroke-width="9" marker-end="url(#${done?(it.show==='흡수'?'mH':'mC'):'mN'})"/>`;
+  }).join('');
+  const labels=[['융해',380,396],['응고',380,474],['기화',552,236],['액화',440,262],['승화',208,236],['승화',320,262]].map(([t,x,y])=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${lang()==='en'?15:18}" font-family="var(--display)" fill="var(--ink)">${w(t)}</text>`).join('');
+  const nameSlots=models.map((m,i)=>{const it=items.find(x=>x.model===i),done=run.pts[it.id]!=null;
+    return`<g class="slot${done?' done':''}" id="slot-m${i}"><rect x="${(i===0?m[0]-128:i===1?m[0]+68:m[0]+66)}" y="${m[1]-18}" width="60" height="36" rx="9"/><text x="${(i===0?m[0]-98:i===1?m[0]+98:m[0]+96)}" y="${m[1]+1}">${done?w(it.show):F('no',i+1)}</text></g>`;}).join('');
+  return`<svg ${NS.replace('0 0 760 480','0 0 760 490')} role="img" aria-label="세 가지 상태와 여섯 가지 상태 변화 그림">
+    <defs>${[['mH','heat'],['mC','cold'],['mN','grid'],['mS','ink']].map(([id,col])=>`<marker id="${id}" markerWidth="4" markerHeight="4" refX="2.4" refY="2" orient="auto"><path d="M0 0L4 2L0 4z" fill="var(--${col})"/></marker>`).join('')}</defs>
+    ${arrows}${labels}${dotsModel(0,150,410,62)}${dotsModel(1,610,410,62)}${dotsModel(2,380,86,62)}${nameSlots}</svg>`;
+}
+
+const bossSVG=`<svg viewBox="0 0 130 130" aria-hidden="true" id="bossArt"><path d="M18 118V58a47 47 0 0 1 94 0v60l-16-12-15 12-16-12-15 12-16-12z" fill="var(--bad)" stroke="var(--ink)" stroke-width="4" stroke-linejoin="round"/><circle cx="48" cy="56" r="12" fill="#fff" stroke="var(--ink)" stroke-width="3"/><circle cx="84" cy="56" r="12" fill="#fff" stroke="var(--ink)" stroke-width="3"/><circle cx="52" cy="58" r="5" fill="var(--ink)"/><circle cx="80" cy="58" r="5" fill="var(--ink)"/><path d="M36 38l22 8M96 38l-22 8" stroke="var(--ink)" stroke-width="5" stroke-linecap="round"/><path d="M46 84q20-14 40 0" fill="none" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/></svg>`;
+
+/* ===== 게임 진행 ===== */
+let C=null,R=null,walkS=0,walkRaf=0,lock=false,tried=new Set(),curView='';
+const item=()=>C.items[R.i];
+const score=(run=R,c=C)=>c.items.reduce((a,i)=>a+(run.pts[i.id]||0),0);
+const maxScore=c=>c.items.length*FULL;
+
+function show(v){['vHome','vGame','vDone'].forEach(id=>$(id).hidden=id!==v);}
+
+function renderHome(){
+  document.documentElement.removeAttribute('data-course');
+  $('courses').innerHTML=['cool','heat'].map(k=>{
+    const c=COURSES[k],r=S.runs[k];
+    let st=w('아직 시작하지 않았어요');
+    if(r){st=r.phase==='done'?F('done',score(r,c),maxScore(c)):F('run',r.i,c.items.length);}
+    const line=c.pts.map(p=>p.join(',')).join(' ');
+    return`<button class="course" type="button" data-course="${k}" data-go="${k}">
+      <svg viewBox="130 20 630 450" aria-hidden="true"><polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span><h2>${c.no}. ${w(c.title)}</h2><small>${w(c.sub)}</small><span class="state">${st}</span></span>
+    </button>`;}).join('');
+}
+
+function start(k){
+  const cls=$('inClass').value,num=$('inNum').value,name=$('inName').value.trim();
+  if(!cls||!num||!name){$('whoMsg').textContent=w('반, 번호, 이름을 모두 입력하세요. 인증서에 들어갑니다.');(!cls?$('inClass'):!num?$('inNum'):$('inName')).focus();return;}
+  $('whoMsg').textContent='';
+  if(S.name&&(S.name!==name||S.cls!==cls||S.num!==num)) S.runs={};
+  Object.assign(S,{cls,num,name});
+  C=COURSES[k];R=S.runs[k]=S.runs[k]||blankRun();persist();
+  document.documentElement.setAttribute('data-course',k);
+  if(R.phase==='done') return finish();
+  paintHead();
+  curView='';show('vGame');
+  walkS=0;
+  scope.t=tempAt(C.pts,0);scope.seed(mAt(C.key,0));
+  if(R.phase==='write') return renderWrite();
+  renderItem();
+}
+
+function paintHead(){$('gTitle').textContent=`${C.no}. ${w(C.title)}`;$('gWho').textContent=F('who',S.cls,S.num,S.name);}
+function setScope(s){
+  scope.m=mAt(C.key,s);scope.t=tempAt(C.pts,s);
+  $('scNow').textContent=stateName(C.key,s);
+  $('scT').style.width=(scope.t*100)+'%';
+  $('scV').style.width=((26+150*scope.t)/176*100)+'%';
+  const hero=$('hero');
+  if(hero){
+    const[x,y]=pt(C.pts,s);hero.setAttribute('transform',`translate(${x} ${y})`);
+    const n=[C.pts[0]];for(let t=1;t<=s&&t<=5;t++)n.push(C.pts[t]);n.push([x,y]);
+    $('trail').setAttribute('points',n.map(p=>p.join(',')).join(' '));
+    const h=scope.t*392;$('merc').setAttribute('y',434-h);$('merc').setAttribute('height',h+6);
+  }
+}
+function walk(to){
+  cancelAnimationFrame(walkRaf);
+  const from=walkS;
+  if(RM||Math.abs(to-from)<1e-3){walkS=to;return setScope(to);}
+  const dur=clamp(Math.abs(to-from)*1100,450,1600),t0=performance.now();
+  const go=now=>{const p=clamp((now-t0)/dur,0,1),e=p*(2-p);walkS=from+(to-from)*e;setScope(walkS);if(p<1)walkRaf=requestAnimationFrame(go);};
+  walkRaf=requestAnimationFrame(go);
+}
+
+function fitSvgText(t,max){const n=t.getComputedTextLength&&t.getComputedTextLength();if(n&&n>max)t.style.fontSize=(17*max/n).toFixed(1)+'px';}
+function paintSlots(){
+  C.items.filter(i=>i.slot).forEach(i=>{
+    const g=$('slot-'+i.slot);if(!g)return;
+    const p=R.pts[i.id],on=item()&&item().id===i.id&&p==null;
+    g.classList.toggle('done',p!=null);g.classList.toggle('on',on);
+    const[t,c,b]=[g.querySelector('text'),g.querySelector('.ptc'),g.querySelector('.pt')];
+    t.textContent=p!=null?w(i.show):on?w('여기!'):'?';
+    t.style.fontSize='';fitSvgText(t,C.slots[i.slot].w-(p!=null?14:8));
+    c.setAttribute('r',p!=null?10:0);b.textContent=p!=null?p:'';
+  });
+}
+function paintBoard(){
+  const it=item(),view=it?(it.view||'curve'):'curve';
+  if(view!==curView){
+    curView=view;
+    if(view==='curve'){$('board').innerHTML=mapSVG(C,R);}
+    if(view==='boss'){
+      $('board').innerHTML=`<div class="boss"><div class="fight">${bossSVG}<p class="bubble">${w(C.boss.taunt)}</p></div><div class="hp">${w('체력')}<div><i id="hp" style="width:100%"></i></div></div><p class="line" id="bossLine"></p></div>`;
+    }
+  }
+  if(view==='curve'){paintSlots();}
+  if(view==='tri'){
+    $('board').innerHTML=triSVG(R,C);
+    if(it.arrow!=null){const a=$('arr-'+it.arrow);a.setAttribute('stroke','var(--ink)');a.setAttribute('marker-end','url(#mS)');if(!RM)a.style.animation='pulseA 1s infinite';}
+    if(it.model!=null){$('slot-m'+it.model).classList.add('on');}
+  }
+  if(view==='boss'){
+    const items=C.items.filter(i=>i.view==='boss');
+    const done=items.filter(i=>R.pts[i.id]!=null).length;
+    $('hp').style.width=(100-done/items.length*100)+'%';
+    $('bossLine').innerHTML=C.boss.line.map(p=>{
+      if(typeof p==='string')return esc(w(p));
+      const b=items[p],d=R.pts[b.id]!=null,on=it&&it.id===b.id;
+      return`<span class="bl${d?' done':on?' on':''}">${d?tileText(b,b.show):'?'}</span>`;}).join('');
+  }
+}
+
+function paintTop(){
+  const n=C.items.filter(i=>R.pts[i.id]!=null).length;
+  $('gMeter').style.width=(n/C.items.length*100)+'%';
+  $('gScore').textContent=score();
+  $('gCombo').hidden=R.combo<2;$('gCombo').textContent=F('combo',R.combo);
+  $('btnSound').textContent=w(S.sound?'소리 켬':'소리 끔');$('btnSound').setAttribute('aria-pressed',S.sound);
+}
+
+function renderItem(keep){
+  const it=item();if(!keep)tried=new Set();lock=false;
+  paintBoard();paintTop();
+  const s=it.at[0]+it.at[1];
+  if((it.view||'curve')==='curve') walk(s);else{walkS=s;setScope(s);}
+  renderQ();
+}
+const arrowAsk=it=>{const[d,x]=it.ask.match(/\((.+?)\).*?([가-힣]+)할 때/).slice(1),dir=d.split(' → ').map(w).join(' → ');return it.arrow===5?F('deposit',dir):F('arrow',dir,w(x));};
+const tileText=(it,t)=>it.view==='boss'&&lang()==='en'?w(t).toLowerCase():w(t);
+function renderQ(){
+  const it=item(),nw=R.wrong[it.id]||0,solved=R.pts[it.id]!=null;
+  const n=R.i+1,total=C.items.length;
+  const label=w(it.view==='boss'?'오개념 몬스터':it.view==='tri'?'입자 모형 도감':'온도 곡선');
+  let body='';
+  if(it.type==='text'){
+    body=`<form class="answer" id="ansForm" autocomplete="off"><input id="ansIn" lang="${lang()}" aria-label="${w('답을 쓰세요')}" placeholder="${w('답을 쓰세요')}" autocomplete="off" spellcheck="false" enterkeyhint="done"><button class="btn main" type="submit">${w('확인')}</button></form>`;
+  }else{
+    body=`<div class="tiles">${it.tiles.map((t,i)=>`<button class="tile" type="button" data-k="${i}">${tileText(it,t)}</button>`).join('')}</div>`;
+  }
+  $('qCard').innerHTML=`
+    <div class="tag"><span>${F('step',label,n,total)}</span><span class="worth" id="qWorth"></span></div>
+    <p class="ask">${it.arrow!=null?arrowAsk(it):w(it.ask)}</p>
+    ${body}
+    <p class="say no" id="qNo" hidden></p>
+    <p class="say hint" id="qHint" hidden></p>
+    <p class="say why" id="qWhy" hidden></p>
+    <button class="btn main" id="qNext" type="button" hidden>${w('다음으로')}</button>`;
+  paintWorth();
+  if(nw>=2) showHint();
+  if(it.type==='text'){
+    $('ansForm').addEventListener('submit',e=>{e.preventDefault();submit($('ansIn').value);});
+    $('ansIn').focus({preventScroll:true});
+  }else{
+    $('qCard').querySelectorAll('.tile').forEach(b=>{const t=it.tiles[+b.dataset.k];if(tried.has(norm(t)))b.disabled=true;b.addEventListener('click',()=>submit(t,b));});
+  }
+  $('qNext').addEventListener('click',next);
+  if(solved) onSolved(it,true);
+}
+function paintWorth(){$('qWorth').textContent=F('worth',earned(R.wrong[item().id]||0));}
+function showHint(){
+  const it=item(),n=R.wrong[it.id]||0;let t=w(it.hint);
+  if(it.type==='text'&&n>=4) t+=' '+F('first',w(it.answers[0])[0]);
+  $('qHint').hidden=false;$('qHint').innerHTML=`<b>${w('힌트')}</b> ${esc(t)}`;
+}
+function submit(val,btn){
+  const it=item();
+  if(lock||R.pts[it.id]!=null) return;
+  const v=norm(val);if(!v) return;
+  if(tried.has(v)){$('qNo').hidden=false;$('qNo').textContent=w('이미 써 본 답이에요. 다른 답을 생각해 보세요. 점수는 줄지 않아요.');return;}
+  lock=true;setTimeout(()=>lock=false,400);
+  if([...it.answers,...(it.answers.flatMap(a=>ACCEPT[a]||[]))].some(a=>norm(a)===v)){
+    const pts=earned(R.wrong[it.id]||0);
+    R.pts[it.id]=pts;
+    R.combo=(R.wrong[it.id]||0)===0?R.combo+1:0;R.best=Math.max(R.best,R.combo);
+    persist();sfx.ok();
+    const r=(btn||$('qCard')).getBoundingClientRect();popGain(pts,r.left+r.width/2,r.top);
+    if(btn)btn.classList.add('ok');
+    onSolved(it,false);
+    if(it.view==='boss'){const a=$('bossArt');if(a){a.classList.remove('hit');void a.getBoundingClientRect();a.classList.add('hit');}}
+    return;
+  }
+  tried.add(v);
+  R.wrong[it.id]=(R.wrong[it.id]||0)+1;R.combo=0;persist();sfx.no();
+  const n=R.wrong[it.id],v2=ALIAS[v]||v;
+  const near=it.near&&Object.keys(it.near).find(k=>norm(k)===v2);
+  $('qNo').hidden=false;$('qNo').textContent=near?w(it.near[near]):F('wrong',n);
+  paintWorth();paintTop();
+  if(n>=2) showHint();
+  if(btn){btn.disabled=true;}
+  else{const f=$('ansForm');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');$('ansIn').value='';$('ansIn').focus({preventScroll:true});}
+}
+function onSolved(it,again){
+  paintBoard();paintTop();
+  $('qWorth').textContent=F('got',R.pts[it.id]);
+  $('qNo').hidden=true;$('qHint').hidden=true;
+  const inp=$('ansIn');if(inp){inp.value=w(it.show);inp.disabled=true;$('ansForm').querySelector('button').disabled=true;}
+  $('qCard').querySelectorAll('.tile').forEach(b=>{if(it.answers.includes(it.tiles[+b.dataset.k]))b.classList.add('ok');b.disabled=true;});
+  $('qWhy').hidden=false;$('qWhy').innerHTML=`<b>${w('정답!')}</b> ${esc(w(it.why))}${esc(F('korean',it.show.replace(/ \(.+/,'')))}`;
+  const nx=$('qNext');nx.hidden=false;nx.textContent=w(R.i+1<C.items.length?'다음으로':'설명 쓰러 가기');
+  nx.focus({preventScroll:true});
+}
+function next(){
+  if(R.pts[item().id]==null) return;
+  R.i++;persist();
+  if(R.i>=C.items.length){R.phase='write';persist();return renderWrite();}
+  renderItem();
+}
+function popGain(p,x,y){
+  const d=document.createElement('div');d.className='gain';d.textContent='+'+p;
+  d.style.left=clamp(x-30,8,innerWidth-80)+'px';d.style.top=clamp(y-30,8,innerHeight-80)+'px';
+  document.body.appendChild(d);setTimeout(()=>d.remove(),1000);
+}
+
+/* 내 말로 쓰기 */
+const hasWord=(t,q)=>[q.ko,q.en,q.zh,...q.alt].some(x=>norm(t).includes(norm(x)));
+function renderWrite(){
+  curView='write';paintTop();
+  walkS=5;setScope(5);
+  $('board').innerHTML=`<div class="writebox">
+    <h3>${w('몬스터를 물리쳤어요! 마지막은 내 말로 정리하기')}</h3>
+    <p>${w(C.writeAsk)}</p>
+    <div class="chips" id="chips">${REQUIRED.map((q,i)=>`<span class="chip" data-w="${i}">${q[lang()]}</span>`).join('')}</div>
+    <textarea id="myText" maxlength="220" aria-label="${w('필수 단어 네 개를 모두 넣어 쓰세요.')}" placeholder="${w('필수 단어 네 개를 모두 넣어 쓰세요.')}">${esc(R.text||'')}</textarea>
+  </div>`;
+  $('qCard').innerHTML=`<div class="tag"><span>${w('마지막 칸')}</span><span class="worth">${w('점수 없음')}</span></div>
+    <p class="ask">${w('필수 단어를 모두 넣어 문장을 완성하면 인증서가 열려요.')}</p>
+    <p class="say no" id="wMsg" hidden></p>
+    <button class="btn main" id="wDone" type="button" disabled>${w('인증서 받기')}</button>`;
+  const ta=$('myText');
+  const sync=()=>{
+    R.text=ta.value;persist();
+    let all=true;$('chips').querySelectorAll('.chip').forEach(c=>{const ok=hasWord(ta.value,REQUIRED[+c.dataset.w]);c.classList.toggle('ok',ok);all=all&&ok;});
+    $('wDone').disabled=!(all&&norm(ta.value).length>=15);
+  };
+  ta.addEventListener('input',sync);sync();
+  $('wDone').addEventListener('click',()=>{R.phase='done';R.finishedAt=Date.now();persist();finish();sfx.win();});
+}
+
+/* ===== 인증서 ===== */
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+function wrap(c,text,max){const out=[];let l='';for(const ch of text.replace(/\n/g,' ')){if(c.measureText(l+ch).width>max){out.push(l);l=ch;}else l+=ch;}if(l)out.push(l);return out;}
+function rankOf(r,c){const q=score(r,c)/maxScore(c);return w(q>=.9?'입자 박사':q>=.7?'입자 탐험가':'입자 새내기');}
+function badgesOf(r,c){
+  const out=[],first=c.items.filter(i=>r.pts[i.id]===FULL).length;
+  if(first===c.items.length)out.push(w('완벽한 원정: 모든 칸을 한 번에'));
+  if(r.best>=5)out.push(F('comboBadge',r.best));
+  if(c.items.some(i=>(r.wrong[i.id]||0)>=2))out.push(w('끝까지 해냄: 힌트를 보고 완주'));
+  out.push(w('몬스터 퇴치'));
+  return out;
+}
+async function drawCard(){
+  try{await Promise.race([Promise.all([document.fonts.load('30px Jua','입자'),document.fonts.load('800 20px "Gothic A1"','입자'),document.fonts.load('800 20px "Noto Sans SC"','粒子')]),new Promise(r=>setTimeout(r,1500))]);}catch(e){}
+  const W=1280,H=920,cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  const c=cv.getContext('2d'),ink=css('--ink'),acc=C.key==='heat'?css('--heat'):css('--cold'),soft=C.key==='heat'?css('--heat-soft'):css('--cold-soft');
+  const good=css('--good'),goodS=css('--good-soft'),paper=css('--paper'),grid=css('--grid'),sun=css('--sun');
+  c.fillStyle='#fff';c.fillRect(0,0,W,H);
+  c.fillStyle=acc;c.fillRect(0,0,W,108);
+  c.fillStyle='#fff';c.textBaseline='middle';c.font=`42px ${FONT_D}`;c.fillText(w('입자 원정대 인증서'),36,56);
+  c.font=`800 24px ${FONT_B}`;c.textAlign='right';c.fillText(F('grade',F('who',S.cls,S.num,S.name)),W-36,40);
+  const d=new Date(R.finishedAt||Date.now());
+  c.font=`600 18px ${FONT_B}`;c.fillText(F('when',w(C.title),d.getMonth()+1,d.getDate(),d.getHours(),String(d.getMinutes()).padStart(2,'0'),R.tries),W-36,74);
+  c.textAlign='left';
+  // 곡선
+  const ox=30,oy=124,k=1.08;
+  c.save();c.translate(ox,oy);c.scale(k,k);
+  c.strokeStyle=grid;c.lineWidth=1;for(let x=0;x<=760;x+=40){c.beginPath();c.moveTo(x,0);c.lineTo(x,480);c.stroke();}for(let y=0;y<=480;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(760,y);c.stroke();}
+  c.strokeStyle=ink;c.lineWidth=3;c.beginPath();c.moveTo(150,20);c.lineTo(150,462);c.lineTo(748,462);c.stroke();
+  c.font=`800 13px ${FONT_B}`;c.fillStyle=css('--ink-soft');c.fillText(w('온도'),158,28);c.textAlign='right';c.fillText(w('시간'),744,474);c.textAlign='left';
+  [['low'],['top']].forEach(([k2])=>{const s=C.slots[k2];c.setLineDash([3,5]);c.lineWidth=2;c.strokeStyle=ink;c.beginPath();c.moveTo(s.x+s.w/2,s.y);c.lineTo(C.pts[k2==='low'&&C.key==='heat'||k2==='top'&&C.key==='cool'?1:3][0],s.y);c.stroke();c.setLineDash([]);});
+  C.deco.forEach(o=>{
+    if(o.rect){rr(c,...o.rect,12);c.fillStyle=paper;c.fill();c.strokeStyle=ink;c.lineWidth=2.5;c.stroke();}
+    else if(o.poly){c.beginPath();o.poly.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.closePath();c.fillStyle=o.fill==='cold'?css('--cold'):css('--heat');c.fill();c.strokeStyle=ink;c.lineWidth=2.5;c.stroke();}
+    else{c.font=`800 ${o.size}px ${FONT_B}`;c.fillStyle=ink;c.textBaseline='alphabetic';c.textAlign=o.end?'right':'left';c.fillText(dw(o.text),o.x,o.y);c.textAlign='left';c.textBaseline='middle';}
+  });
+  c.strokeStyle=acc;c.lineWidth=14;c.lineCap='round';c.lineJoin='round';c.beginPath();C.pts.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.stroke();
+  C.states.forEach(([t,x,y])=>{rr(c,x-26,y-14,52,28,14);c.fillStyle=soft;c.fill();c.strokeStyle=ink;c.lineWidth=2;c.stroke();c.fillStyle=ink;c.font=`15px ${FONT_D}`;c.textAlign='center';c.fillText(w(t),x,y+1);c.textAlign='left';});
+  C.items.filter(i=>i.slot).forEach(i=>{const s=C.slots[i.slot];
+    rr(c,s.x-s.w/2,s.y-s.h/2,s.w,s.h,9);c.fillStyle=goodS;c.fill();c.strokeStyle=good;c.lineWidth=2.5;c.stroke();
+    c.fillStyle=ink;c.font=`17px ${FONT_D}`;c.textAlign='center';{const tx=w(i.show),mw=s.w-14,tw=c.measureText(tx).width;if(tw>mw)c.font=`${(17*mw/tw).toFixed(1)}px ${FONT_D}`;c.fillText(tx,s.x,s.y+1);}
+    c.beginPath();c.arc(s.x+s.w/2-2,s.y-s.h/2+2,10,0,6.29);c.fillStyle=good;c.fill();c.fillStyle='#fff';c.font=`12px ${FONT_D}`;c.fillText(R.pts[i.id],s.x+s.w/2-2,s.y-s.h/2+3);c.textAlign='left';});
+  c.restore();
+  // 점수 패널
+  const px=862,pw=W-px-30;
+  rr(c,px,128,pw,520,16);c.fillStyle=paper;c.fill();c.strokeStyle=ink;c.lineWidth=3;c.stroke();
+  c.fillStyle=ink;c.font=`800 20px ${FONT_B}`;c.fillText(w('총점'),px+24,164);
+  c.font=`84px ${FONT_D}`;c.fillStyle=acc;c.fillText(score(),px+24,236);
+  const sw=c.measureText(String(score())).width;c.font=`30px ${FONT_D}`;c.fillStyle=ink;c.fillText(F('max',maxScore(C)),px+34+sw,250);
+  rr(c,px+24,290,pw-48,52,12);c.fillStyle=sun;c.fill();c.strokeStyle=ink;c.lineWidth=3;c.stroke();
+  c.fillStyle=ink;c.font=`30px ${FONT_D}`;c.textAlign='center';c.fillText(rankOf(R,C),px+pw/2,317);c.textAlign='left';
+  const first=C.items.filter(i=>R.pts[i.id]===FULL).length,hints=C.items.filter(i=>(R.wrong[i.id]||0)>=2).length;
+  c.font=`800 20px ${FONT_B}`;c.fillText(F('firstN',first,C.items.length),px+24,378);c.fillText(F('hints',hints),px+24,412);
+  c.font=`600 18px ${FONT_B}`;let by=462;
+  badgesOf(R,C).forEach(b=>{c.beginPath();c.arc(px+33,by,7,0,6.29);c.fillStyle=good;c.fill();c.fillStyle=ink;wrap(c,b,pw-80).forEach((l,i)=>{c.fillText(l,px+50,by+i*24);});by+=46;});
+  // 내 말로 설명
+  rr(c,30,664,W-60,226,16);c.fillStyle=soft;c.fill();c.strokeStyle=ink;c.lineWidth=3;c.stroke();
+  c.fillStyle=ink;c.font=`26px ${FONT_D}`;c.fillText(w('온도가 일정하게 유지되는 까닭 (내 말로 설명)'),54,700);
+  c.font=`600 25px ${FONT_B}`;wrap(c,R.text,W-112).slice(0,6).forEach((l,i)=>c.fillText(l,54,744+i*34));
+  return cv;
+}
+let lastBlob=null;
+async function finish(quiet){
+  show('vDone');
+  $('dTitle').textContent=F('title',S.name,w(C.title));
+  $('dNote').textContent=w('저장 버튼이 되지 않으면 인증서 그림을 길게 눌러 저장하세요.');
+  const cv=await drawCard();
+  $('dImg').src=cv.toDataURL('image/png');
+  cv.toBlob(b=>{lastBlob=b;});
+  if(!quiet)confetti();
+}
+async function getDownloads(){
+  if(!window.claude||!window.claude.use) return null;
+  try{return await window.claude.use('downloads');}catch(e){return null;}
+}
+async function saveCard(){
+  if(!lastBlob) return;
+  const name=`ipja_${C.key}_${S.cls}ban_${S.num}.png`;
+  const dl=await getDownloads();
+  if(dl){
+    if(fsEl()) await exitFS();
+    try{await dl.save({filename:name,data:lastBlob});$('dNote').textContent=w('저장했어요. 다운로드 폴더를 확인하세요.');}
+    catch(e){$('dNote').textContent=w(e&&e.code==='declined'?'저장을 취소했어요. 다시 누르면 저장할 수 있어요.':'여기서는 저장할 수 없어요. 인증서 그림을 길게 눌러 저장하세요.');}
+    return;
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(lastBlob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  $('dNote').textContent=w('저장했어요. 다운로드 폴더를 확인하세요.');
+}
+
+function confetti(){
+  if(RM) return;
+  const cv=$('fx');cv.hidden=false;cv.width=innerWidth;cv.height=innerHeight;
+  const c=cv.getContext('2d'),cols=['#ffc62e','#f2542d','#1479d9','#0d9a78'];
+  const bits=Array.from({length:90},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.5,r:4+Math.random()*7,v:2+Math.random()*3,c:cols[Math.floor(Math.random()*4)]}));
+  let n=0;const tick=()=>{c.clearRect(0,0,cv.width,cv.height);bits.forEach(b=>{b.y+=b.v;c.beginPath();c.arc(b.x,b.y,b.r,0,6.29);c.fillStyle=b.c;c.fill();});if(++n<200)requestAnimationFrame(tick);else cv.hidden=true;};tick();
+}
+
+/* ===== 입자 실험실 ===== */
+const LAB_T=[.12,.4,.85];
+let labOn=false,labM=0,labBack=null;
+function openLab(){
+  labBack={m:scope.m,t:scope.t};labOn=true;labM=Math.round(scope.m);
+  scope.view=$('labCv');$('lab').hidden=false;paintLab();
+}
+function closeLab(){
+  labOn=false;scope.paused=false;scope.view=null;$('lab').hidden=true;
+  scope.m=labBack.m;scope.t=labBack.t;paintLab();
+}
+function paintLab(){
+  document.querySelectorAll('[data-m]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.m===labM));
+  $('labRun').textContent=w(scope.paused?'실행':'멈춤');
+  $('chkBond').checked=scope.bonds;$('labBond').checked=scope.bonds;
+}
+document.querySelectorAll('[data-m]').forEach(b=>b.addEventListener('click',()=>{labM=+b.dataset.m;scope.paused=false;paintLab();}));
+$('labRun').addEventListener('click',()=>{scope.paused=!scope.paused;paintLab();});
+['chkBond','labBond'].forEach(id=>$(id).addEventListener('change',e=>{scope.bonds=e.target.checked;paintLab();}));
+document.querySelectorAll('.labOpen').forEach(b=>b.addEventListener('click',openLab));
+$('labClose').addEventListener('click',closeLab);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&labOn)closeLab();});
+
+/* ===== 화면 맞춤 =====
+   무대 크기를 화면 비율에 맞춰 정하고 통째로 배율을 적용한다.
+   가로형은 높이 720 이상, 세로형은 높이 1140 이상을 보장해 내용이 잘리지 않는다.
+   화면 키보드가 올라오면 배율은 그대로 두고 스크롤만 허용한다. */
+let baseW=0,baseH=0;
+const typing=()=>/^(INPUT|TEXTAREA)$/.test(document.activeElement&&document.activeElement.tagName||'');
+function viewBox(){const r=document.body.getBoundingClientRect();return[r.width,r.height];}
+function fit(){
+  const[w,h]=viewBox();
+  if(!w||!h) return;
+  if(typing()&&baseH&&Math.abs(w-baseW)<2&&h<=baseH){kbCheck();return;}
+  document.documentElement.classList.remove('kb');$('fit').style.height='';
+  baseW=w;baseH=h;
+  const a=w/h;let W,H;
+  if(a>=1.05){W=Math.max(1120,720*a);H=W/a;}else{H=Math.max(1140,640/a);W=H*a;}
+  const app=$('app');
+  app.style.width=W+'px';app.style.height=H+'px';app.style.transform=`scale(${w/W})`;
+  document.documentElement.dataset.o=a>=1.05?'l':'p';
+}
+function kbCheck(){
+  const vv=window.visualViewport,root=document.documentElement;
+  const seen=vv?vv.height*(vv.scale||1):innerHeight,kb=Math.max(0,baseH-Math.min(seen,viewBox()[1]));
+  const open=typing()&&kb>baseH*.15,was=root.classList.contains('kb');
+  root.classList.toggle('kb',open);
+  $('fit').style.height=open?(baseH+kb)+'px':'';
+  if(open&&!was) setTimeout(()=>document.activeElement.scrollIntoView({block:'center'}),60);
+  if(!open&&was) document.body.scrollTop=0;
+}
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+const exitFS=()=>(document.exitFullscreen||document.webkitExitFullscreen).call(document);
+async function toggleFS(btn){
+  try{
+    if(fsEl()) await exitFS();
+    else{const el=document.documentElement;await (el.requestFullscreen||el.webkitRequestFullscreen).call(el);}
+  }catch(e){btn.textContent=w('전체화면 불가');btn.disabled=true;}
+}
+function paintFS(){document.querySelectorAll('.fsBtn').forEach(b=>{if(!b.disabled)b.textContent=w(fsEl()?'화면 줄이기':'전체화면');});fit();}
+if(!(document.fullscreenEnabled||document.webkitFullscreenEnabled)) document.querySelectorAll('.fsBtn').forEach(b=>b.hidden=true);
+document.querySelectorAll('.fsBtn').forEach(b=>b.addEventListener('click',()=>toggleFS(b)));
+['fullscreenchange','webkitfullscreenchange'].forEach(e=>document.addEventListener(e,paintFS));
+addEventListener('resize',fit);
+if(window.visualViewport) visualViewport.addEventListener('resize',kbCheck);
+document.addEventListener('focusin',()=>setTimeout(kbCheck,350));
+document.addEventListener('focusout',()=>setTimeout(()=>{kbCheck();fit();},350));
+
+/* ===== 언어 전환 ===== */
+const H1={ko:'입자 <span>원</span><span>정</span>대',en:'Particle <span>Exp</span><span>edition</span>',zh:'粒子<span>探</span><span>险</span>队'};
+function applyLang(){
+  const l=lang();
+  document.documentElement.lang=l;
+  FONT_D=l==='zh'?'"Noto Sans SC", sans-serif':'Jua, "Gothic A1", sans-serif';
+  FONT_B=l==='zh'?'"Noto Sans SC", sans-serif':'"Gothic A1", sans-serif';
+  document.title=w('입자 원정대');
+  $('heroTitle').innerHTML=H1[l];
+  document.querySelectorAll('[data-i]').forEach(e=>{if(!e.dataset.ko)e.dataset.ko=e.textContent;e.textContent=w(e.dataset.ko);});
+  document.querySelectorAll('[data-ip]').forEach(e=>e.placeholder=w(e.dataset.ip));
+  document.querySelectorAll('.langs').forEach(g=>{const short=g.classList.contains('short');
+    g.innerHTML=LANGS.map(([k,a,b])=>`<button type="button" data-lang="${k}" aria-label="${a}" aria-pressed="${k===l}">${short?b:a}</button>`).join('');});
+  fillSelects();paintFS();paintLab();
+}
+function setLang(l){
+  S.lang=l;persist();applyLang();
+  if(!$('vHome').hidden) renderHome();
+  if(!$('vGame').hidden){paintHead();if(R.phase==='write')renderWrite();else{curView='';renderItem(true);}}
+  if(!$('vDone').hidden) finish(true);
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-lang]');if(b)setLang(b.dataset.lang);});
+
+/* ===== 연결 ===== */
+function fillSelects(){
+  const opt=(n)=>`<option value="">${w('선택')}</option>`+Array.from({length:n},(_,i)=>`<option>${i+1}</option>`).join('');
+  const c=$('inClass').value||S.cls,n=$('inNum').value||S.num;
+  $('inClass').innerHTML=opt(CLASS_COUNT);$('inNum').innerHTML=opt(STUDENT_COUNT);
+  $('inClass').value=c;$('inNum').value=n;if(!$('inName').value)$('inName').value=S.name;
+}
+$('whoForm').addEventListener('submit',e=>e.preventDefault());
+$('courses').addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)start(b.dataset.go);});
+$('btnHome').addEventListener('click',()=>{persist();renderHome();show('vHome');});
+$('btnBack').addEventListener('click',()=>{renderHome();show('vHome');});
+$('btnSound').addEventListener('click',()=>{S.sound=!S.sound;persist();paintTop();sfx.ok();});
+$('btnSave').addEventListener('click',saveCard);
+$('btnAgain').addEventListener('click',()=>{const k=C.key,t=(R.tries||1)+1;S.runs[k]=blankRun(t);persist();start(k);});
+const st=document.createElement('style');st.textContent='@keyframes pulseA{50%{opacity:.25}}';document.head.appendChild(st);
+fit();applyLang();renderHome();requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
